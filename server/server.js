@@ -20,8 +20,8 @@ const db = new sqlite3.Database("./mydb.sqlite");
 
 db.serialize(() => {
   // TODO: 개발 완료시 테이블 삭제 후 다시 생성 로직 제거
-  // db.run("DROP TABLE IF EXISTS USERS");
-  // db.run("DROP TABLE IF EXISTS MESSAGES");
+  db.run("DROP TABLE IF EXISTS USERS");
+  db.run("DROP TABLE IF EXISTS MESSAGES");
 
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
@@ -35,46 +35,46 @@ db.serialize(() => {
   );
 
   // DELETE ALL DATA
-  // db.run("DELETE FROM USERS");
-  // db.run("DELETE FROM MESSAGES");
-  // db.run("DELETE FROM LOGS");
+  db.run("DELETE FROM USERS");
+  db.run("DELETE FROM MESSAGES");
+  db.run("DELETE FROM LOGS");
 
   // SAMPLE_DATA.js 데이터 삽입
-  // const DEFAULT_USERS = [
-  //   {
-  //     name: "Admin",
-  //     image: "/image-admin.png",
-  //     IP: "192.168.0.126",
-  //     bgColor: "#fff4ff",
-  //   },
-  //   {
-  //     name: "MK",
-  //     image: "/image-1.png",
-  //     IP: "192.168.0.73",
-  //     bgColor: "#ffe9e6",
-  //   },
-  //   {
-  //     name: "DS",
-  //     image: "/image-2.png",
-  //     IP: "192.168.0.34",
-  //     bgColor: "#ffe888",
-  //   },
-  //   {
-  //     name: "JH",
-  //     image: "/image-3.png",
-  //     IP: "192.168.0.48",
-  //     bgColor: "#ffaa88",
-  //   },
-  // ];
+  const DEFAULT_USERS = [
+    {
+      name: "Admin",
+      image: "/image-admin.png",
+      IP: "192.168.0.126",
+      bgColor: "#fff4ff",
+    },
+    {
+      name: "MK",
+      image: "/image-1.png",
+      IP: "192.168.0.73",
+      bgColor: "#ffe9e6",
+    },
+    {
+      name: "DS",
+      image: "/image-2.png",
+      IP: "192.168.0.34",
+      bgColor: "#ffe888",
+    },
+    {
+      name: "JH",
+      image: "/image-3.png",
+      IP: "192.168.0.48",
+      bgColor: "#ffaa88",
+    },
+  ];
 
-  // DEFAULT_USERS.forEach((user) => {
-  //   db.run("INSERT INTO USERS (name, image, IP, bgColor) VALUES (?, ?, ?, ?)", [
-  //     user.name,
-  //     user.image,
-  //     user.IP,
-  //     user.bgColor,
-  //   ]);
-  // });
+  DEFAULT_USERS.forEach((user) => {
+    db.run("INSERT INTO USERS (name, image, IP, bgColor) VALUES (?, ?, ?, ?)", [
+      user.name,
+      user.image,
+      user.IP,
+      user.bgColor,
+    ]);
+  });
 });
 
 app.get("/check-user", (req, res) => {
