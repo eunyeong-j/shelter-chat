@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Settings } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../../components/ui/avatar";
+import { Loader2, X } from "lucide-react";
+import { Avatar, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
-import { Message, User, UserMessage } from "../../@types/global";
-import { SettingModal } from "./SettingModal";
+import { Message, UserMessage } from "../../@types/global";
+import { Setting } from "./Setting";
+import { Users } from "./Users";
+import { BackgroundVideo } from "../../components/BackgroundVideo";
 
 const DEFAULT_BG_COLOR = "#fff4ff";
 
@@ -21,8 +19,6 @@ export const Screen = (): JSX.Element => {
   const [messageLength, setMessageLength] = useState(0);
   const [newName, setNewName] = useState("");
   const [newBgColor, setNewBgColor] = useState(DEFAULT_BG_COLOR);
-
-  const [hiddenUserName, setHiddenUserName] = useState(false);
 
   const {
     data: userData,
@@ -78,12 +74,12 @@ export const Screen = (): JSX.Element => {
       const res = await axios.put(
         `http://192.168.0.126:5050/user/${userData.user.id}/name`,
         {
-          name,
+          oldName: userData.user.name,
+          newName: name,
         }
       );
       refetchUsers();
       setNewName("");
-      setHiddenUserName(false);
       return res.data;
     },
   });
@@ -118,12 +114,12 @@ export const Screen = (): JSX.Element => {
       refetchMessages();
       refetchUsers();
       return () => clearInterval(interval);
-    }, 1000);
+    }, 1500);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const mainElement = document.querySelector("main");
+    const mainElement = document.querySelector("#chat-container");
     if (mainElement) {
       mainElement.scrollTo({
         top: mainElement.scrollHeight,
@@ -137,14 +133,15 @@ export const Screen = (): JSX.Element => {
   }, [message]);
 
   const handleEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.target as HTMLTextAreaElement).value.trim() === "") return;
+    const text = (e.target as HTMLTextAreaElement).value.trim();
+
+    if (text === "") return;
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
 
       // Send the message
-      const text = (e.target as HTMLTextAreaElement).value;
       send(text);
 
       // Reset the message and textarea value
@@ -182,43 +179,47 @@ export const Screen = (): JSX.Element => {
 
   if (!isIpLoading && !userData?.allowed) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen text-white">
         접근이 허용된 사용자가 아닙니다!
       </div>
     );
   }
 
   return (
-    <div className="bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
-      <div className=" w-[1280px] h-[100vh] pt-[46px] relative">
+    <div className="max-w-[640px] mx-auto bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
+      <BackgroundVideo />
+      <div className=" w-full h-[100vh] pt-[46px] pb-[120px] relative">
         {/* Main Chat Container */}
-        <main className="absolute w-[900px] h-[calc(100vh-180px)] top-[0x] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden pb-[20px]">
+        <div
+          id="chat-container"
+          className="w-full mx-auto h-full top-[0x] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px]"
+        >
           {/* Header */}
-          <header className="fixed w-full h-[46px] top-0 left-0 bg-[#6d5fbb] shadow-[0px_4px_4px_#a3a3a340] flex items-center z-10">
-            <h1 className="ml-[35px] font-bold text-white text-lg">
-              FZ 한화팀 임시 대피소
+          <header className="absolute w-full h-[45px] top-0 left-0 bg-[#6d5fbb] shadow-[0px_4px_4px_#a3a3a340] flex items-center z-10">
+            <h1 className="ml-[45px] font-bold text-white text-lg ">
+              직딩 임시 대피소
             </h1>
 
-            <SettingModal
+            <Users />
+
+            <Setting
               newName={newName}
               newBgColor={newBgColor}
-              hiddenUserName={hiddenUserName}
               onNameChange={setNewName}
               onBgColorChange={setNewBgColor}
               onUpdateName={updateUserName}
               onUpdateBgColor={updateUserBgColor}
-              onToggleNameVisibility={() => setHiddenUserName(!hiddenUserName)}
             />
           </header>
-          <div className="relative h-[100px] flex flex-col items-center">
+          <div className="w-full relative h-[100px] flex flex-col items-center">
             {/* Previous chat message */}
-            <p className="font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[100px] flex items-center justify-center">
+            <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[100px] flex items-center justify-center select-none">
               이전 대화가 존재하지 않습니다.
             </p>
 
             {/* Date Separator */}
-            <div className="mx-auto flex flex-col items-center justify-center h-[50px]">
-              <Separator className="w-[900px] h-px" />
+            <div className="w-full mx-auto flex flex-col items-center justify-center h-[50px]">
+              <Separator className="w-full h-px" />
               <div className="absolute bottom-0 bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9]">
                 <span className=" py-1 font-normal text-[#8a8a8a] text-xs text-center">
                   2025년 5월 29일
@@ -230,113 +231,111 @@ export const Screen = (): JSX.Element => {
           {/* Chat Messages */}
           {!isMessagesLoading &&
             messages.length > 0 &&
-            messages.map((message: UserMessage) => (
-              <div key={message.id} className="relative">
-                <div
-                  className={`flex items-start gap-4 ml-4 mt-4 ${
-                    message.userId === userData.user.id
-                      ? "justify-flex-start flex-row-reverse"
-                      : "justify-start"
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <Avatar className="w-[45px] h-[45px]">
-                      <AvatarImage src={message.image} alt={message.name} />
-                    </Avatar>
-                    <span className="text-xs font-bold text-black">
-                      {message.name}
-                    </span>
+            messages.map((message: UserMessage, index: number) => {
+              if (message?.isLog === "Y") {
+                return (
+                  <div key={`log-${message.id}-${index}`} className="relative">
+                    <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[30px] flex items-center justify-center select-none">
+                      ({message.createdAt.toLocaleString()}) {message.message}
+                    </p>
                   </div>
+                );
+              }
 
+              return (
+                <div key={`${message.id}-${index}`} className="relative">
                   <div
-                    className={`flex flex-row gap-1 ${
+                    className={`flex items-start gap-4 mx-4 mt-4 ${
                       message.userId === userData.user.id
-                        ? "flex-row-reverse"
-                        : ""
+                        ? "justify-flex-start flex-row-reverse"
+                        : "justify-start"
                     }`}
                   >
-                    <div
-                      className={`rounded-[7px] p-3 max-w-[551px]`}
-                      style={{ backgroundColor: message.bgColor }}
-                    >
-                      <p className="font-normal text-black text-sm break-words whitespace-pre-wrap">
-                        {message.message}
-                      </p>
+                    <div className="flex flex-col items-center gap-1">
+                      <Avatar className="w-[45px] h-[45px] mt-[14px]">
+                        <AvatarImage src={message.image} alt={message.name} />
+                      </Avatar>
                     </div>
-                    <span className="font-normal text-[#8a8a8a] text-xs self-center mb-2">
-                      {message.createdAt.toLocaleString()}
-                    </span>
-                    {message.userId === userData.user.id && (
-                      <button
-                        className="font-normal text-[#8a8a8a] text-xs self-center mb-2 text-red-500 hover:text-red-700"
-                        onClick={() =>
-                          message.messageId
-                            ? deleteMessage(message.messageId)
-                            : null
-                        }
+
+                    <div className={`flex flex-col gap-1`}>
+                      <span
+                        className={`text-xs font-bold text-[#595959] ${
+                          message.userId === userData.user.id
+                            ? "text-right"
+                            : "text-left"
+                        }`}
                       >
-                        X
-                      </button>
-                    )}
+                        {message.name}
+                      </span>
+                      <div
+                        className={`flex flex-row gap-1 ${
+                          message.userId === userData.user.id
+                            ? "flex-row-reverse"
+                            : ""
+                        }`}
+                      >
+                        <div
+                          className={`rounded-[7px] px-3 py-2`}
+                          style={{ backgroundColor: message.bgColor }}
+                        >
+                          <p className="font-normal text-black text-sm break-words whitespace-pre-wrap">
+                            {!message.deletedAt
+                              ? message.message
+                              : "삭제된 메시지 입니다."}
+                          </p>
+                        </div>
+                        <span
+                          className={`font-normal text-[#8a8a8a] text-xs self-center mb-2  `}
+                        >
+                          {message.createdAt.toLocaleString()}
+                        </span>
+                        {message.userId === userData.user.id &&
+                          !message.deletedAt && (
+                            <X
+                              className="font-normal text-[#8a8a8a] text-xs self-center mb-2 text-red-500 hover:text-red-700 cursor-pointer"
+                              size={14}
+                              onClick={() =>
+                                message.messageId
+                                  ? deleteMessage(message.messageId)
+                                  : null
+                              }
+                            />
+                          )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+        </div>
 
-          {/* Message Input Area */}
-          <div className="fixed w-full h-[100px] bottom-[2vh] left-0 flex">
-            <div className="relative w-[900px] mx-auto bg-white rounded-md border border-solid border-[#e2e2e2] flex">
-              <textarea
-                ref={textareaRef}
-                className="h-full w-full border-none focus-visible:ring-0 font-normal text-[#000000] placeholder:text-[#8b8b8b] text-sm pl-[13px] pt-2.5 rounded-md"
-                placeholder="여기에 텍스트를 입력합니다..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={500}
-                onKeyDown={handleEnter}
-              />
-              <div className="absolute bottom-1 right-[110px] font-normal text-[#8a8a8a] text-[10px]">
-                {messageLength}/500
-              </div>
-              <Button
-                className="w-20 h-[100px] absolute right-0 bg-[#6d60bc] hover:bg-[#5d51a9] rounded-[0px_6px_6px_0px] font-bold"
-                onClick={() => send(message)}
-              >
-                Enter
-              </Button>
+        {/* Message Input Area */}
+        <div className="w-full h-[120px] bottom-0 left-0 flex pt-[4px] px-[4px] pb-[20px] border-t border-solid border-[#e2e2e2]">
+          <div className="relative w-full mx-auto bg-white border border-solid border-[#e2e2e2] flex ">
+            <textarea
+              ref={textareaRef}
+              className="h-full w-full border-none focus-visible:ring-0 font-normal text-[#000000] placeholder:text-[#8b8b8b] text-sm pl-[13px] pt-2.5 focus:outline-none"
+              placeholder="여기에 텍스트를 입력합니다..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              maxLength={500}
+              onKeyUp={handleEnter}
+            />
+            <div className="absolute bottom-1 right-[110px] font-normal text-[#8a8a8a] text-[10px]">
+              {messageLength}/500
             </div>
+            <Button
+              className="w-20 h-full absolute right-0 bg-[#6d60bc] hover:bg-[#5d51a9] font-bold rounded-none"
+              onClick={() => send(message)}
+            >
+              Enter
+            </Button>
           </div>
-        </main>
 
-        {/* User Sidebar */}
-        <aside className="absolute right-0 top-[46px]">
-          {isUsersLoading && (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-10 h-10 animate-spin" />
-            </div>
-          )}
-          {!isUsersLoading &&
-            users.length > 0 &&
-            users.map((user: User, index: number) => (
-              <div key={user.id} className="flex items-center mb-1">
-                <span
-                  className={`absolute right-[100px] top-[83px] font-normal text-black text-sm w-max ${
-                    hiddenUserName ? "hidden" : ""
-                  }`}
-                  style={{ top: `${83 + index * 56}px` }}
-                >
-                  {user.name}
-                </span>
-                <Avatar
-                  className="w-[50px] h-[50px] absolute right-[40px] hover:cursor-pointer hover:opacity-90"
-                  style={{ top: `${68 + index * 56}px` }}
-                >
-                  <AvatarImage src={user.image} alt={user.name} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
-              </div>
-            ))}
-        </aside>
+          <span className="text-xs text-[#8a8a8a] absolute bottom-1 left-2">
+            Last updated: 2025.05.30
+          </span>
+        </div>
       </div>
     </div>
   );

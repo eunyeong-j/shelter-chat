@@ -18,28 +18,27 @@ app.use(express.json());
 
 const db = new sqlite3.Database("./mydb.sqlite");
 
+// /*
 db.serialize(() => {
-  // TODO: 개발 완료시 테이블 삭제 후 다시 생성 로직 제거
+  // DELETE ALL DATA
   db.run("DROP TABLE IF EXISTS USERS");
   db.run("DROP TABLE IF EXISTS MESSAGES");
+  db.run("DROP TABLE IF EXISTS LOGS");
 
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
   );
   db.run(
-    "CREATE TABLE IF NOT EXISTS MESSAGES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, message TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (userId) REFERENCES USERS(id))"
+    "CREATE TABLE IF NOT EXISTS MESSAGES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, message TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, deletedAt DATETIME DEFAULT NULL, FOREIGN KEY (userId) REFERENCES USERS(id))"
   );
-
   db.run(
     "CREATE TABLE IF NOT EXISTS LOGS (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, action TEXT, details TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (userId) REFERENCES USERS(id))"
   );
 
-  // DELETE ALL DATA
-  db.run("DELETE FROM USERS");
-  db.run("DELETE FROM MESSAGES");
-  db.run("DELETE FROM LOGS");
-
-  // SAMPLE_DATA.js 데이터 삽입
+  // db.run("DELETE FROM USERS");
+  // db.run("DELETE FROM MESSAGES");
+  // db.run("DELETE FROM LOGS");
+  // // SAMPLE_DATA.js 데이터 삽입
   const DEFAULT_USERS = [
     {
       name: "Admin",
@@ -51,22 +50,21 @@ db.serialize(() => {
       name: "MK",
       image: "/image-1.png",
       IP: "192.168.0.73",
-      bgColor: "#ffe9e6",
+      bgColor: "#e6edff",
     },
     {
       name: "DS",
       image: "/image-2.png",
       IP: "192.168.0.34",
-      bgColor: "#ffe888",
+      bgColor: "#ffe6e6",
     },
     {
       name: "JH",
       image: "/image-3.png",
       IP: "192.168.0.48",
-      bgColor: "#ffaa88",
+      bgColor: "#ffede6",
     },
   ];
-
   DEFAULT_USERS.forEach((user) => {
     db.run("INSERT INTO USERS (name, image, IP, bgColor) VALUES (?, ?, ?, ?)", [
       user.name,
@@ -76,6 +74,7 @@ db.serialize(() => {
     ]);
   });
 });
+// */
 
 app.get("/check-user", (req, res) => {
   const ip =
@@ -111,17 +110,35 @@ app.get("/users", (req, res) => {
 
 app.put("/user/:id/name", (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { oldName, newName } = req.body;
 
-  db.run("UPDATE USERS SET name = ? WHERE id = ?", [name, id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+  db.run(
+    "UPDATE USERS SET name = ? WHERE id = ?",
+    [newName, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const detailLog = `'${oldName}'님이 이름을 '${newName}'으로 변경했습니다.`;
+
+      // Log the name change
+      db.run(
+        "INSERT INTO LOGS (userId, action, details) VALUES (?, ?, ?)",
+        [id, "NAME_CHANGE", detailLog],
+        (logErr) => {
+          if (logErr) {
+            console.error("Failed to create log:", logErr);
+          }
+        }
+      );
+
+      res.json({ success: true });
     }
-    if (this.changes === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json({ success: true });
-  });
+  );
 });
 
 app.put("/user/:id/bgColor", (req, res) => {
@@ -145,9 +162,31 @@ app.put("/user/:id/bgColor", (req, res) => {
 
 app.get("/messages", (req, res) => {
   db.all(
-    `SELECT MESSAGES.id as messageId, MESSAGES.userId as userId, MESSAGES.message, strftime('%H:%M', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, USERS.name, USERS.image, USERS.bgColor
-     FROM MESSAGES INNER JOIN USERS ON MESSAGES.userId = USERS.id 
-     ORDER BY MESSAGES.createdAt ASC`,
+    `SELECT * 
+       FROM (SELECT  "N" as isLog,
+                    MESSAGES.id as messageId, 
+                    MESSAGES.userId as userId, 
+                    MESSAGES.message, 
+                    strftime('%H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
+                    USERS.name, 
+                    USERS.image, 
+                    USERS.bgColor,
+                    MESSAGES.deletedAt
+              FROM MESSAGES 
+             INNER JOIN USERS ON MESSAGES.userId = USERS.id 
+             UNION ALL
+             SELECT "Y" as isLog,
+                    NULL as messageId,
+                    LOGS.userId,
+                    LOGS.details as message,
+                    strftime('%H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
+                    NULL as name,
+                    NULL as image,
+                    NULL as bgColor,
+                    NULL as deletedAt
+               FROM LOGS)
+      ORDER BY createdAt ASC
+     `,
     [],
     (err, rows) => {
       res.json(rows);
@@ -170,9 +209,13 @@ app.post("/message", (req, res) => {
 
 app.delete("/message/:id", (req, res) => {
   const { id } = req.params;
-  db.run("DELETE FROM MESSAGES WHERE id = ?", [id], function (err) {
-    res.json({ success: true });
-  });
+  db.run(
+    "UPDATE MESSAGES SET deletedAt = CURRENT_TIMESTAMP WHERE id = ?",
+    [id],
+    function (err) {
+      res.json({ success: true });
+    }
+  );
 });
 
 app.listen(port, () => {

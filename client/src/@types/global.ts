@@ -4,14 +4,18 @@ export type User = {
   image: string;
   isOnline: boolean;
   bgColor: string;
+  createdAt: Date;
+  deletedAt?: Date | null;
 };
 
 export type Message = {
   id?: number;
-  messageId?: number; // for UI
   userId: number;
   message: string;
   createdAt: Date;
+  // for UI data
+  messageId?: number;
+  isLog?: "Y" | "N";
 };
 
 export interface UserMessage extends Message, User {}
