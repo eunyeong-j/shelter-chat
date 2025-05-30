@@ -92,6 +92,31 @@ export const Screen = (): JSX.Element => {
     setMessageLength(message.length);
   }, [message]);
 
+  // const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  //   const ele = e.currentTarget;
+  //   const pos = {
+  //     left: ele.scrollLeft,
+  //     top: ele.scrollTop,
+  //     x: e.clientX,
+  //     y: e.clientY,
+  //   };
+
+  //   const mouseMoveHandler = (e: MouseEvent) => {
+  //     const dx = e.clientX - pos.x;
+  //     const dy = e.clientY - pos.y;
+  //     ele.scrollTop = pos.top - dy;
+  //     ele.scrollLeft = pos.left - dx;
+  //   };
+
+  //   const mouseUpHandler = () => {
+  //     document.removeEventListener("mousemove", mouseMoveHandler);
+  //     document.removeEventListener("mouseup", mouseUpHandler);
+  //   };
+
+  //   document.addEventListener("mousemove", mouseMoveHandler);
+  //   document.addEventListener("mouseup", mouseUpHandler);
+  // };
+
   const handleEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const text = (e.target as HTMLTextAreaElement).value.trim();
 
@@ -146,13 +171,13 @@ export const Screen = (): JSX.Element => {
   }
 
   return (
-    <div className="max-w-[640px] mx-auto bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
+    <div className="relative max-w-[720px] w-full mx-auto bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
       <BackgroundVideo />
-      <div className=" w-full h-[100vh] pt-[46px] pb-[120px] relative">
+      <div className="w-full h-[100vh] pt-[46px] pb-[120px] relative">
         {/* Main Chat Container */}
         <div
           id="chat-container"
-          className="w-full mx-auto h-full top-[0x] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px]"
+          className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px] scrollbar px-0"
         >
           {/* Header */}
           <header className="absolute w-full h-[45px] top-0 left-0 bg-[#6d5fbb] shadow-[0px_4px_4px_#a3a3a340] flex items-center z-10">
@@ -234,8 +259,8 @@ export const Screen = (): JSX.Element => {
               return (
                 <div key={`${message.id}-${index}`} className="relative">
                   <div
-                    className={`flex items-start gap-4 mx-4 ${
-                      isContinueMessage ? "my-2" : "my-4"
+                    className={`flex items-start gap-2 mx-4 ${
+                      isContinueMessage ? "mt-2" : "mt-4"
                     } ${
                       message.userId === userData.user.id
                         ? "justify-flex-start flex-row-reverse"
@@ -250,7 +275,7 @@ export const Screen = (): JSX.Element => {
                       {!isContinueMessage && (
                         <Avatar
                           className={`w-[45px] h-[45px]  ${
-                            isContinueMessage ? "my-0" : "my-[14px]"
+                            isContinueMessage ? "my-0" : "mt-[14px]"
                           }`}
                         >
                           <AvatarImage src={message.image} alt={message.name} />
@@ -272,7 +297,7 @@ export const Screen = (): JSX.Element => {
                       )}
 
                       <div
-                        className={`flex flex-row gap-1 ${
+                        className={`flex flex-row gap-1 items-end ${
                           message.userId === userData.user.id
                             ? "flex-row-reverse"
                             : ""
@@ -282,7 +307,11 @@ export const Screen = (): JSX.Element => {
                           className={`rounded-[7px] px-3 py-2 max-w-[950%]`}
                           style={{ backgroundColor: message.bgColor }}
                         >
-                          <p className="font-normal text-black text-sm break-words whitespace-pre-wrap">
+                          <p
+                            className={`font-normal text-black text-sm break-words whitespace-pre-wrap ${
+                              message.deletedAt ? "opacity-40" : ""
+                            }`}
+                          >
                             {!message.deletedAt
                               ? message.message
                               : "삭제된 메시지 입니다."}
@@ -296,14 +325,14 @@ export const Screen = (): JSX.Element => {
                           }`}
                         >
                           <span
-                            className={`font-normal text-[#adadad] text-xs self-center`}
+                            className={`font-normal text-[#adadad] text-xs self-center pb-1 select-none`}
                           >
                             {message.createdAt.toLocaleString().split(" ")[1]}
                           </span>
                           {message.userId === userData.user.id &&
                             !message.deletedAt && (
                               <X
-                                className="font-normal text-[#8a8a8a] text-xs self-center text-red-500 hover:text-red-700 cursor-pointer"
+                                className="font-normal text-[#8a8a8a] text-xs self-center text-red-500 hover:text-red-700 cursor-pointer opacity-30 hover:opacity-100 transition-all duration-300"
                                 size={14}
                                 onClick={() =>
                                   message.messageId
@@ -323,6 +352,12 @@ export const Screen = (): JSX.Element => {
 
         {/* Message Input Area */}
         <div className="w-full h-[120px] bottom-0 left-0 flex pt-[4px] px-[4px] pb-[20px] border-t border-solid border-[#e2e2e2]">
+          {/* <div className="absolute bottom-[130px] w-[100px] left-0 w-full h-[35px] text-white text-xs font-bold rounded-md">
+            <Button className=" h-full mx-auto text-white text-xs font-bold px-2 py-1 bg-none">
+              최신 메세지로 가기
+            </Button>
+          </div> */}
+
           <div className="relative w-full mx-auto bg-white border border-solid border-[#e2e2e2] flex ">
             <textarea
               ref={textareaRef}

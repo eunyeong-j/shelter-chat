@@ -243,8 +243,6 @@ app.get("/messages", (req, res) => {
 
 app.post("/message", (req, res) => {
   const { userId, message } = req.body;
-  console.log("userId", userId);
-  console.log("message", message);
   db.run(
     "INSERT INTO MESSAGES (userId, message) VALUES (?, ?)",
     [userId, message],

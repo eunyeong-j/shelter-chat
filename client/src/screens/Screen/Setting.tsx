@@ -84,6 +84,8 @@ export const Setting = ({
               내 이름 바꾸기
             </Button>
 
+            {/* TODO add */}
+            {/*             
             <input
               value={newBgColor}
               onChange={(e) => onBgColorChange(e.target.value)}
@@ -105,28 +107,27 @@ export const Setting = ({
               내 배경색 바꾸기
               <br />
               (only hex)
-            </Button>
-          </div>
+            </Button> */}
 
-          {/* TODO add */}
-          {/* <div className="flex flex-col gap-2">
-            <h4 className="text-md font-bold">채팅 제목 바꾸기</h4>
-            <input
-              value={newChatTitle}
-              onChange={(e) => handleChatTitleChange(e.target.value)}
-              type="text"
-              className="w-full h-[30px] bg-[#ffffff] rounded-sm text-xs font-bold border border-solid border-[#e2e2e2] pl-2 focus:outline-none"
-            />
-            <Button
-              className="w-full h-[42px] bg-[#6d60bc] hover:bg-[#5d51a9] rounded-sm text-xs font-bold"
-              onClick={() => {
-                if (newChatTitle.trim() === "") return;
-                handleUpdateChatTitle();
-              }}
-            >
-              채팅 제목 바꾸기
-            </Button>
-          </div> */}
+            {/* <div className="flex flex-col gap-2">
+              <h4 className="text-md font-bold">채팅 제목 바꾸기</h4>
+              <input
+                value={newChatTitle}
+                onChange={(e) => handleChatTitleChange(e.target.value)}
+                type="text"
+                className="w-full h-[30px] bg-[#ffffff] rounded-sm text-xs font-bold border border-solid border-[#e2e2e2] pl-2 focus:outline-none"
+              />
+              <Button
+                className="w-full h-[42px] bg-[#6d60bc] hover:bg-[#5d51a9] rounded-sm text-xs font-bold"
+                onClick={() => {
+                  if (newChatTitle.trim() === "") return;
+                  handleUpdateChatTitle();
+                }}
+              >
+                채팅 제목 바꾸기
+              </Button>
+            </div> */}
+          </div>
         </div>
       )}
     </>
