@@ -1,6 +1,7 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
+const WebSocket = require("ws");
 const app = express();
 const port = 5050;
 
@@ -18,7 +19,34 @@ app.use(express.json());
 
 const db = new sqlite3.Database("./mydb.sqlite");
 
-// /*
+// Create WebSocket server
+const wss = new WebSocket.Server({ port: 5051 });
+
+// Store all connected clients
+const clients = new Set();
+
+// WebSocket connection handler
+wss.on("connection", (ws) => {
+  // Add new client to the set
+  clients.add(ws);
+
+  // Handle client disconnection
+  ws.on("close", () => {
+    clients.delete(ws);
+  });
+});
+
+// Function to broadcast messages to all connected clients
+function broadcast(message) {
+  const messageStr = JSON.stringify(message);
+  clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messageStr);
+    }
+  });
+}
+
+/*
 db.serialize(() => {
   // DELETE ALL DATA
   db.run("DROP TABLE IF EXISTS USERS");
@@ -36,9 +64,9 @@ db.serialize(() => {
   );
 
   // db.run("DELETE FROM USERS");
-  // db.run("DELETE FROM MESSAGES");
-  // db.run("DELETE FROM LOGS");
-  // // SAMPLE_DATA.js 데이터 삽입
+  db.run("DELETE FROM MESSAGES");
+  db.run("DELETE FROM LOGS");
+
   const DEFAULT_USERS = [
     {
       name: "Admin",
@@ -74,7 +102,7 @@ db.serialize(() => {
     ]);
   });
 });
-// */
+*/
 
 app.get("/check-user", (req, res) => {
   const ip =
@@ -133,6 +161,10 @@ app.put("/user/:id/name", (req, res) => {
           if (logErr) {
             console.error("Failed to create log:", logErr);
           }
+          // Broadcast user update
+          broadcast({ type: "USER_UPDATE" });
+          // Broadcast log update
+          broadcast({ type: "LOG_UPDATE" });
         }
       );
 
@@ -155,6 +187,8 @@ app.put("/user/:id/bgColor", (req, res) => {
       if (this.changes === 0) {
         return res.status(404).json({ error: "User not found" });
       }
+      // Broadcast user update
+      broadcast({ type: "USER_UPDATE" });
       res.json({ success: true });
     }
   );
@@ -163,23 +197,36 @@ app.put("/user/:id/bgColor", (req, res) => {
 app.get("/messages", (req, res) => {
   db.all(
     `SELECT * 
-       FROM (SELECT  "N" as isLog,
+       FROM (
+            SELECT "DATE" as type,
+                    NULL as messageId,
+                    NULL as userId,
+                    strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours')) as message,
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(createdAt, '+9 hours')) as createdAt,
+                    NULL as name,
+                    NULL as image,
+                    NULL as bgColor,
+                    NULL as deletedAt
+               FROM MESSAGES
+               GROUP BY strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours'))
+               UNION ALL
+               SELECT "MSG" as type,
                     MESSAGES.id as messageId, 
                     MESSAGES.userId as userId, 
                     MESSAGES.message, 
-                    strftime('%H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
                     USERS.name, 
                     USERS.image, 
                     USERS.bgColor,
                     MESSAGES.deletedAt
               FROM MESSAGES 
-             INNER JOIN USERS ON MESSAGES.userId = USERS.id 
-             UNION ALL
-             SELECT "Y" as isLog,
+              INNER JOIN USERS ON MESSAGES.userId = USERS.id 
+              UNION ALL
+              SELECT "LOG" as type,
                     NULL as messageId,
                     LOGS.userId,
                     LOGS.details as message,
-                    strftime('%H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
                     NULL as name,
                     NULL as image,
                     NULL as bgColor,
@@ -202,6 +249,11 @@ app.post("/message", (req, res) => {
     "INSERT INTO MESSAGES (userId, message) VALUES (?, ?)",
     [userId, message],
     function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      // Broadcast message update
+      broadcast({ type: "MESSAGE_UPDATE" });
       res.json({ id: this.lastID });
     }
   );
@@ -213,11 +265,18 @@ app.delete("/message/:id", (req, res) => {
     "UPDATE MESSAGES SET deletedAt = CURRENT_TIMESTAMP WHERE id = ?",
     [id],
     function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      // Broadcast message update
+      broadcast({ type: "MESSAGE_UPDATE" });
       res.json({ success: true });
     }
   );
 });
 
+// Start HTTP server
 app.listen(port, () => {
-  console.log(`Server running on http://192.168.0.126:${port}`);
+  console.log(`HTTP Server running on http://192.168.0.126:${port}`);
+  console.log(`WebSocket Server running on ws://192.168.0.126:5051`);
 });

@@ -1,6 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { Loader2, UsersRound } from "lucide-react";
 import {
   Avatar,
@@ -9,30 +7,17 @@ import {
 } from "../../components/ui/avatar";
 import { User } from "../../@types/global";
 
-export const Users = () => {
+export const Users = ({
+  users,
+  isUsersLoading,
+}: {
+  users: User[];
+  isUsersLoading: boolean;
+  refetchUsers: () => void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const usersListRef = useRef<HTMLDivElement>(null);
   const usersButtonRef = useRef<HTMLDivElement>(null);
-
-  const {
-    data: users = [],
-    isLoading: isUsersLoading,
-    refetch: refetchUsers,
-  } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const res = await axios.get("http://192.168.0.126:5050/users");
-      return res.data;
-    },
-  });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetchUsers();
-      return () => clearInterval(interval);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

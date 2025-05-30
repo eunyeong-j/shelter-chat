@@ -15,7 +15,7 @@ export type Message = {
   createdAt: Date;
   // for UI data
   messageId?: number;
-  isLog?: "Y" | "N";
+  type?: "DATE" | "MSG" | "LOG";
 };
 
 export interface UserMessage extends Message, User {}

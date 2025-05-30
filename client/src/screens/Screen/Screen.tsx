@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import { Avatar, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
-import { Message, UserMessage } from "../../@types/global";
+import { UserMessage } from "../../@types/global";
 import { Setting } from "./Setting";
 import { Users } from "./Users";
 import { BackgroundVideo } from "../../components/BackgroundVideo";
-
+import { websocketService } from "../../lib/websocket";
+import {
+  useDeleteMessage,
+  useCheckUser,
+  useUsers,
+  useMessages,
+  useSendMessage,
+  useUpdateUserName,
+  useUpdateUserBgColor,
+} from "../../lib/api";
 const DEFAULT_BG_COLOR = "#fff4ff";
 
 export const Screen = (): JSX.Element => {
@@ -24,98 +31,51 @@ export const Screen = (): JSX.Element => {
     data: userData,
     isLoading: isIpLoading,
     isError: isIpError,
-  } = useQuery({
-    queryKey: ["ip"],
-    queryFn: async () => {
-      const res = await axios.get("http://192.168.0.126:5050/check-user");
-      return res.data;
-    },
-  });
+  } = useCheckUser();
 
   const {
     data: users = [],
     isLoading: isUsersLoading,
     isError: isUsersError,
     refetch: refetchUsers,
-  } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const res = await axios.get("http://192.168.0.126:5050/users");
-      return res.data;
-    },
-  });
+  } = useUsers();
 
   const {
     data: messages = [],
     isLoading: isMessagesLoading,
     isError: isMessagesError,
     refetch: refetchMessages,
-  } = useQuery({
-    queryKey: ["messages"],
-    queryFn: async () => {
-      const res = await axios.get("http://192.168.0.126:5050/messages");
-      return res.data;
-    },
-  });
+  } = useMessages();
 
-  const { mutate: sendMessage } = useMutation({
-    mutationFn: async (message: Message) => {
-      const res = await axios.post(
-        "http://192.168.0.126:5050/message",
-        message
-      );
-      refetchMessages();
-      return res.data;
-    },
-  });
-
-  const { mutate: updateUserName } = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await axios.put(
-        `http://192.168.0.126:5050/user/${userData.user.id}/name`,
-        {
-          oldName: userData.user.name,
-          newName: name,
-        }
-      );
-      refetchUsers();
-      setNewName("");
-      return res.data;
-    },
-  });
-
-  const { mutate: updateUserBgColor } = useMutation({
-    mutationFn: async (bgColor: string) => {
-      const res = await axios.put(
-        `http://192.168.0.126:5050/user/${userData.user.id}/bgColor`,
-        {
-          bgColor,
-        }
-      );
-      refetchMessages();
-      setNewBgColor(DEFAULT_BG_COLOR);
-      return res.data;
-    },
-  });
-
-  const { mutate: deleteMessage } = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await axios.delete(`http://192.168.0.126:5050/message/${id}`);
-      return res.data;
-    },
-  });
+  const { mutate: sendMessage } = useSendMessage();
+  const { mutate: updateUserName } = useUpdateUserName();
+  const { mutate: updateUserBgColor } = useUpdateUserBgColor();
+  const { mutate: deleteMessage } = useDeleteMessage();
 
   const isServerError = useMemo(() => {
     return isUsersError || isMessagesError || isIpError;
   }, [isUsersError, isMessagesError, isIpError]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      refetchMessages();
+    // Subscribe to WebSocket events
+    websocketService.subscribe("USER_UPDATE", () => {
       refetchUsers();
-      return () => clearInterval(interval);
-    }, 1500);
-    return () => clearInterval(interval);
+    });
+
+    websocketService.subscribe("MESSAGE_UPDATE", () => {
+      refetchMessages();
+    });
+
+    websocketService.subscribe("LOG_UPDATE", () => {
+      refetchMessages();
+    });
+
+    // Cleanup subscriptions when component unmounts
+    return () => {
+      websocketService.unsubscribe("USER_UPDATE", refetchUsers);
+      websocketService.unsubscribe("MESSAGE_UPDATE", refetchMessages);
+      websocketService.unsubscribe("LOG_UPDATE", refetchMessages);
+    };
   }, []);
 
   useEffect(() => {
@@ -200,42 +160,71 @@ export const Screen = (): JSX.Element => {
               직딩 임시 대피소
             </h1>
 
-            <Users />
+            <Users
+              users={users}
+              isUsersLoading={isUsersLoading}
+              refetchUsers={refetchUsers}
+            />
 
             <Setting
               newName={newName}
               newBgColor={newBgColor}
               onNameChange={setNewName}
               onBgColorChange={setNewBgColor}
-              onUpdateName={updateUserName}
-              onUpdateBgColor={updateUserBgColor}
+              onUpdateName={() => {
+                updateUserName({
+                  userId: userData.user.id,
+                  oldName: userData.user.name,
+                  newName: newName,
+                });
+                setNewName("");
+              }}
+              onUpdateBgColor={() => {
+                updateUserBgColor({
+                  userId: userData.user.id,
+                  bgColor: newBgColor,
+                });
+                setNewBgColor(DEFAULT_BG_COLOR);
+              }}
             />
           </header>
+
           <div className="w-full relative h-[100px] flex flex-col items-center">
             {/* Previous chat message */}
             <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[100px] flex items-center justify-center select-none">
               이전 대화가 존재하지 않습니다.
             </p>
-
-            {/* Date Separator */}
-            <div className="w-full mx-auto flex flex-col items-center justify-center h-[50px]">
-              <Separator className="w-full h-px" />
-              <div className="absolute bottom-0 bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9]">
-                <span className=" py-1 font-normal text-[#8a8a8a] text-xs text-center">
-                  2025년 5월 29일
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Chat Messages */}
           {!isMessagesLoading &&
             messages.length > 0 &&
             messages.map((message: UserMessage, index: number) => {
-              if (message?.isLog === "Y") {
+              const isContinueMessage =
+                index !== 0 &&
+                messages[index - 1].type !== "LOG" &&
+                message.userId === messages[index - 1].userId;
+
+              if (message?.type === "DATE") {
+                return (
+                  <div
+                    key={`date-${message.id}-${index}`}
+                    className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]"
+                  >
+                    <Separator className="w-full h-px absolute top-6" />
+                    <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-10">
+                      <span className="font-normal text-[#8a8a8a] text-xs text-center">
+                        {message.message}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (message?.type === "LOG") {
                 return (
                   <div key={`log-${message.id}-${index}`} className="relative">
-                    <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[30px] flex items-center justify-center select-none">
+                    <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[50px] flex items-center justify-center select-none">
                       ({message.createdAt.toLocaleString()}) {message.message}
                     </p>
                   </div>
@@ -245,28 +234,43 @@ export const Screen = (): JSX.Element => {
               return (
                 <div key={`${message.id}-${index}`} className="relative">
                   <div
-                    className={`flex items-start gap-4 mx-4 mt-4 ${
+                    className={`flex items-start gap-4 mx-4 ${
+                      isContinueMessage ? "my-2" : "my-4"
+                    } ${
                       message.userId === userData.user.id
                         ? "justify-flex-start flex-row-reverse"
                         : "justify-start"
                     }`}
                   >
-                    <div className="flex flex-col items-center gap-1">
-                      <Avatar className="w-[45px] h-[45px] mt-[14px]">
-                        <AvatarImage src={message.image} alt={message.name} />
-                      </Avatar>
+                    <div
+                      className={`flex flex-col items-center gap-1 ${
+                        isContinueMessage ? "mx-[23px]" : ""
+                      }`}
+                    >
+                      {!isContinueMessage && (
+                        <Avatar
+                          className={`w-[45px] h-[45px]  ${
+                            isContinueMessage ? "my-0" : "my-[14px]"
+                          }`}
+                        >
+                          <AvatarImage src={message.image} alt={message.name} />
+                        </Avatar>
+                      )}
                     </div>
 
                     <div className={`flex flex-col gap-1`}>
-                      <span
-                        className={`text-xs font-bold text-[#595959] ${
-                          message.userId === userData.user.id
-                            ? "text-right"
-                            : "text-left"
-                        }`}
-                      >
-                        {message.name}
-                      </span>
+                      {!isContinueMessage && (
+                        <span
+                          className={`text-xs font-bold text-[#595959] ${
+                            message.userId === userData.user.id
+                              ? "text-right"
+                              : "text-left"
+                          }`}
+                        >
+                          {message.name}
+                        </span>
+                      )}
+
                       <div
                         className={`flex flex-row gap-1 ${
                           message.userId === userData.user.id
@@ -275,7 +279,7 @@ export const Screen = (): JSX.Element => {
                         }`}
                       >
                         <div
-                          className={`rounded-[7px] px-3 py-2`}
+                          className={`rounded-[7px] px-3 py-2 max-w-[950%]`}
                           style={{ backgroundColor: message.bgColor }}
                         >
                           <p className="font-normal text-black text-sm break-words whitespace-pre-wrap">
@@ -284,23 +288,31 @@ export const Screen = (): JSX.Element => {
                               : "삭제된 메시지 입니다."}
                           </p>
                         </div>
-                        <span
-                          className={`font-normal text-[#8a8a8a] text-xs self-center mb-2  `}
+                        <div
+                          className={`flex flex-row gap-1 mx-1 ${
+                            message.userId === userData.user.id
+                              ? "flex-row-reverse"
+                              : ""
+                          }`}
                         >
-                          {message.createdAt.toLocaleString()}
-                        </span>
-                        {message.userId === userData.user.id &&
-                          !message.deletedAt && (
-                            <X
-                              className="font-normal text-[#8a8a8a] text-xs self-center mb-2 text-red-500 hover:text-red-700 cursor-pointer"
-                              size={14}
-                              onClick={() =>
-                                message.messageId
-                                  ? deleteMessage(message.messageId)
-                                  : null
-                              }
-                            />
-                          )}
+                          <span
+                            className={`font-normal text-[#adadad] text-xs self-center`}
+                          >
+                            {message.createdAt.toLocaleString().split(" ")[1]}
+                          </span>
+                          {message.userId === userData.user.id &&
+                            !message.deletedAt && (
+                              <X
+                                className="font-normal text-[#8a8a8a] text-xs self-center text-red-500 hover:text-red-700 cursor-pointer"
+                                size={14}
+                                onClick={() =>
+                                  message.messageId
+                                    ? deleteMessage(message.messageId)
+                                    : null
+                                }
+                              />
+                            )}
+                        </div>
                       </div>
                     </div>
                   </div>
