@@ -13,3 +13,10 @@ $ npm run dev
 $ npm i
 $ npm run dev
 ```
+
+# Server Start
+
+```
+// root path
+$ npm run start
+```

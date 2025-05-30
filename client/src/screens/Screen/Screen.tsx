@@ -344,8 +344,11 @@ export const Screen = (): JSX.Element => {
             </Button>
           </div>
 
-          <span className="text-xs text-[#8a8a8a] absolute bottom-1 left-2">
-            Last updated: 2025.05.30
+          <span
+            className="text-xs text-[#8a8a8a] absolute bottom-1 left-2"
+            style={{ fontSize: "10px" }}
+          >
+            - Last updated: 2025.05.30
           </span>
         </div>
       </div>
