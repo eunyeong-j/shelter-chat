@@ -73,7 +73,7 @@ db.serialize(() => {
     "CREATE TABLE IF NOT EXISTS LOGS (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, action TEXT, details TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (userId) REFERENCES USERS(id))"
   );
 
-  // db.run("DELETE FROM USERS");
+  db.run("DELETE FROM USERS");
   db.run("DELETE FROM MESSAGES");
   db.run("DELETE FROM LOGS");
 
@@ -83,6 +83,12 @@ db.serialize(() => {
       image: "/image-admin.png",
       IP: "192.168.0.126",
       bgColor: "#fff4ff",
+    },
+    {
+      name: "HT",
+      image: "/image-4.png",
+      IP: "192.168.0.35",
+      bgColor: "#e6f4ff",
     },
     {
       name: "MK",
