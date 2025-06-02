@@ -27,6 +27,9 @@ export const Screen = (): JSX.Element => {
   const [newName, setNewName] = useState("");
   const [newBgColor, setNewBgColor] = useState(DEFAULT_BG_COLOR);
 
+  // 스크롤 최적화를 위해 임시로 사용, 추후 isRead 적용 후 삭제 예정
+  const [messagesLength, setMessagesLength] = useState(0);
+
   const {
     data: userData,
     isLoading: isIpLoading,
@@ -79,12 +82,18 @@ export const Screen = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    const mainElement = document.querySelector("#chat-container");
-    if (mainElement) {
-      mainElement.scrollTo({
-        top: mainElement.scrollHeight,
-        behavior: "smooth",
-      });
+    if (messages.length > 0) {
+      setMessagesLength(messages.length);
+
+      if (messagesLength < messages.length) {
+        const mainElement = document.querySelector("#chat-container");
+        if (mainElement) {
+          mainElement.scrollTo({
+            top: mainElement.scrollHeight,
+            behavior: "smooth",
+          });
+        }
+      }
     }
   }, [messages]);
 

@@ -1,13 +1,20 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
+const dotenvFlow = require("dotenv-flow");
 const cors = require("cors");
 const WebSocket = require("ws");
 const app = express();
-const port = 5050;
+
+dotenvFlow.config({
+  path: require("path").resolve(__dirname, ".."), // 루트 디렉토리로 경로 지정
+});
 
 // CORS configuration
 const corsOptions = {
-  origin: ["http://localhost:5000", "http://192.168.0.126:5000"],
+  origin: [
+    `http://localhost:${process.env.VITE_HOST_CLIENT_PORT}`,
+    `http://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_CLIENT_PORT}`,
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -20,7 +27,9 @@ app.use(express.json());
 const db = new sqlite3.Database("./mydb.sqlite");
 
 // Create WebSocket server
-const wss = new WebSocket.Server({ port: 5051 });
+const wss = new WebSocket.Server({
+  port: process.env.VITE_HOST_WEBSOCKET_PORT,
+});
 
 // Store all connected clients
 const clients = new Set();
@@ -46,6 +55,7 @@ function broadcast(message) {
   });
 }
 
+// Execute only once when the server start
 /*
 db.serialize(() => {
   // DELETE ALL DATA
@@ -274,7 +284,11 @@ app.delete("/message/:id", (req, res) => {
 });
 
 // Start HTTP server
-app.listen(port, () => {
-  console.log(`HTTP Server running on http://192.168.0.126:${port}`);
-  console.log(`WebSocket Server running on ws://192.168.0.126:5051`);
+app.listen(process.env.VITE_HOST_SERVER_PORT, () => {
+  console.log(
+    `HTTP Server running on http://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_SERVER_PORT}`
+  );
+  console.log(
+    `WebSocket Server running on ws://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_WEBSOCKET_PORT}`
+  );
 });

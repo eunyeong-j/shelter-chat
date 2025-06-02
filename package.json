@@ -6,6 +6,10 @@
     "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "dotenv-cli": "^8.0.0"
+  },
+  "dependencies": {
+    "dotenv-flow": "^4.1.0"
   }
 }

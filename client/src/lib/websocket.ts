@@ -26,7 +26,8 @@ class WebSocketService {
 
   private connect() {
     try {
-      this.socket = new WebSocket("ws://192.168.0.126:5051/ws");
+      const websocketURL = `ws://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_WEBSOCKET_PORT}/ws`;
+      this.socket = new WebSocket(websocketURL);
 
       this.socket.onopen = () => {
         console.log("WebSocket connected");

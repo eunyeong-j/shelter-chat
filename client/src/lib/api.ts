@@ -2,7 +2,7 @@ import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Message } from "../@types/global";
 
-const API_URL = "http://192.168.0.126:5050";
+const API_URL = `http://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_SERVER_PORT}`;
 
 // Queries
 export const useUsers = () => {
