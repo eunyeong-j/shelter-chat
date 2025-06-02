@@ -1,23 +1,16 @@
 import { Settings } from "lucide-react";
-import { Button } from "../../components/ui/button";
 import { useEffect, useRef, useState } from "react";
 
 interface SettingProps {
   newName: string;
-  newBgColor: string;
   onNameChange: (name: string) => void;
-  onBgColorChange: (color: string) => void;
   onUpdateName: (name: string) => void;
-  onUpdateBgColor: (color: string) => void;
 }
 
 export const Setting = ({
   newName,
-  newBgColor,
   onNameChange,
-  onBgColorChange,
   onUpdateName,
-  onUpdateBgColor,
 }: SettingProps): JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -71,8 +64,8 @@ export const Setting = ({
                 }
               }}
             />
-            <Button
-              className="w-full h-[22px] bg-[#6d60bc] hover:bg-[#5d51a9] rounded-sm text-xs font-bold"
+            <button
+              className="w-full h-[22px] bg-[#6d60bc] hover:bg-[#5d51a9] rounded-sm text-xs font-bold text-white"
               onClick={() => {
                 if (newName.trim() === "") {
                   nameInputRef.current?.focus();
@@ -82,33 +75,9 @@ export const Setting = ({
               }}
             >
               내 이름 바꾸기
-            </Button>
+            </button>
 
             {/* TODO add */}
-            {/*             
-            <input
-              value={newBgColor}
-              onChange={(e) => onBgColorChange(e.target.value)}
-              type="text"
-              className="w-full h-[30px] bg-[#ffffff] rounded-sm text-xs font-bold border border-solid border-[#e2e2e2] pl-2 pr-2 focus:outline-none"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  onUpdateBgColor(newBgColor);
-                }
-              }}
-            />
-            <Button
-              className="w-full h-[42px] bg-[#dddddd] hover:bg-[#dddddd] rounded-sm text-xs font-bold text-black"
-              onClick={() => {
-                if (newBgColor.trim() === "") return;
-                onUpdateBgColor(newBgColor);
-              }}
-            >
-              내 배경색 바꾸기
-              <br />
-              (only hex)
-            </Button> */}
-
             {/* <div className="flex flex-col gap-2">
               <h4 className="text-md font-bold">채팅 제목 바꾸기</h4>
               <input

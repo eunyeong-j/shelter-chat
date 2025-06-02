@@ -1,10 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { Loader2, UsersRound } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../../components/ui/avatar";
 import { User } from "../../@types/global";
 
 export const Users = ({
@@ -65,10 +60,9 @@ export const Users = ({
                 key={`${user.id}-${index}`}
                 className="flex items-center mb-1 gap-3"
               >
-                <Avatar className="w-[45px] h-[45px] select-none">
-                  <AvatarImage src={user.image} alt={user.name} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
+                <div className="w-[45px] h-[45px] select-none">
+                  <img src={user.image} alt={user.name} />
+                </div>
                 <span
                   className={` font-normal text-black text-sm w-max cursor-default`}
                 >

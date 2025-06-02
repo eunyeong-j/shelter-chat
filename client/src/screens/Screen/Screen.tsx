@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { Avatar, AvatarImage } from "../../components/ui/avatar";
-import { Button } from "../../components/ui/button";
-import { Separator } from "../../components/ui/separator";
 import { UserMessage } from "../../@types/global";
 import { Setting } from "./Setting";
 import { Users } from "./Users";
@@ -15,20 +12,16 @@ import {
   useMessages,
   useSendMessage,
   useUpdateUserName,
-  useUpdateUserBgColor,
 } from "../../lib/api";
-const DEFAULT_BG_COLOR = "#fff4ff";
+import ChatTextarea from "./ChatTextarea";
 
 export const Screen = (): JSX.Element => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const [message, setMessage] = useState("");
-  const [messageLength, setMessageLength] = useState(0);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [newName, setNewName] = useState("");
-  const [newBgColor, setNewBgColor] = useState(DEFAULT_BG_COLOR);
 
   // 스크롤 최적화를 위해 임시로 사용, 추후 isRead 적용 후 삭제 예정
   const [messagesLength, setMessagesLength] = useState(0);
+  const [isScrollAtBottom, setIsScrollAtBottom] = useState(false);
 
   const {
     data: userData,
@@ -52,12 +45,32 @@ export const Screen = (): JSX.Element => {
 
   const { mutate: sendMessage } = useSendMessage();
   const { mutate: updateUserName } = useUpdateUserName();
-  const { mutate: updateUserBgColor } = useUpdateUserBgColor();
   const { mutate: deleteMessage } = useDeleteMessage();
 
   const isServerError = useMemo(() => {
     return isUsersError || isMessagesError || isIpError;
   }, [isUsersError, isMessagesError, isIpError]);
+
+  const goToLatestMessage = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (chatContainerRef.current) {
+      const currentScreenHeight = chatContainerRef.current?.clientHeight;
+      setIsScrollAtBottom(
+        chatContainerRef.current.scrollHeight -
+          chatContainerRef.current.scrollTop -
+          currentScreenHeight <
+          currentScreenHeight
+      );
+    }
+  };
 
   useEffect(() => {
     // Subscribe to WebSocket events
@@ -86,20 +99,10 @@ export const Screen = (): JSX.Element => {
       setMessagesLength(messages.length);
 
       if (messagesLength < messages.length) {
-        const mainElement = document.querySelector("#chat-container");
-        if (mainElement) {
-          mainElement.scrollTo({
-            top: mainElement.scrollHeight,
-            behavior: "smooth",
-          });
-        }
+        goToLatestMessage();
       }
     }
   }, [messages]);
-
-  useEffect(() => {
-    setMessageLength(message.length);
-  }, [message]);
 
   // const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
   //   const ele = e.currentTarget;
@@ -126,25 +129,7 @@ export const Screen = (): JSX.Element => {
   //   document.addEventListener("mouseup", mouseUpHandler);
   // };
 
-  const handleEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const text = (e.target as HTMLTextAreaElement).value.trim();
-
-    if (text === "") return;
-
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Send the message
-      send(text);
-
-      // Reset the message and textarea value
-      setMessage("");
-      (e.target as HTMLTextAreaElement).value = "";
-    }
-  };
-
-  const send = (text: string) => {
+  const handleEnter = (text: string) => {
     const newMessage = {
       id: 1,
       userId: userData.user.id,
@@ -185,8 +170,10 @@ export const Screen = (): JSX.Element => {
       <div className="w-full h-[100vh] pt-[46px] pb-[120px] relative">
         {/* Main Chat Container */}
         <div
+          ref={chatContainerRef}
           id="chat-container"
           className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px] scrollbar px-0"
+          onScroll={handleScroll}
         >
           {/* Header */}
           <header className="absolute w-full h-[45px] top-0 left-0 bg-[#6d5fbb] shadow-[0px_4px_4px_#a3a3a340] flex items-center z-10">
@@ -202,9 +189,7 @@ export const Screen = (): JSX.Element => {
 
             <Setting
               newName={newName}
-              newBgColor={newBgColor}
               onNameChange={setNewName}
-              onBgColorChange={setNewBgColor}
               onUpdateName={() => {
                 updateUserName({
                   userId: userData.user.id,
@@ -212,13 +197,6 @@ export const Screen = (): JSX.Element => {
                   newName: newName,
                 });
                 setNewName("");
-              }}
-              onUpdateBgColor={() => {
-                updateUserBgColor({
-                  userId: userData.user.id,
-                  bgColor: newBgColor,
-                });
-                setNewBgColor(DEFAULT_BG_COLOR);
               }}
             />
           </header>
@@ -245,7 +223,7 @@ export const Screen = (): JSX.Element => {
                     key={`date-${message.id}-${index}`}
                     className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]"
                   >
-                    <Separator className="w-full h-px absolute top-6" />
+                    <div className="w-full h-px absolute top-6 shrink-0 bg-border" />
                     <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-10">
                       <span className="font-normal text-[#8a8a8a] text-xs text-center">
                         {message.message}
@@ -282,13 +260,13 @@ export const Screen = (): JSX.Element => {
                       }`}
                     >
                       {!isContinueMessage && (
-                        <Avatar
+                        <div
                           className={`w-[45px] h-[45px]  ${
                             isContinueMessage ? "my-0" : "mt-[14px]"
                           }`}
                         >
-                          <AvatarImage src={message.image} alt={message.name} />
-                        </Avatar>
+                          <img src={message.image} alt={message.name} />
+                        </div>
                       )}
                     </div>
 
@@ -360,33 +338,19 @@ export const Screen = (): JSX.Element => {
         </div>
 
         {/* Message Input Area */}
-        <div className="w-full h-[120px] bottom-0 left-0 flex pt-[4px] px-[4px] pb-[20px] border-t border-solid border-[#e2e2e2]">
-          {/* <div className="absolute bottom-[130px] w-[100px] left-0 w-full h-[35px] text-white text-xs font-bold rounded-md">
-            <Button className=" h-full mx-auto text-white text-xs font-bold px-2 py-1 bg-none">
-              최신 메세지로 가기
-            </Button>
-          </div> */}
-
-          <div className="relative w-full mx-auto bg-white border border-solid border-[#e2e2e2] flex ">
-            <textarea
-              ref={textareaRef}
-              className="h-full w-full border-none focus-visible:ring-0 font-normal text-[#000000] placeholder:text-[#8b8b8b] text-sm pl-[13px] pt-2.5 focus:outline-none"
-              placeholder="여기에 텍스트를 입력합니다..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              maxLength={500}
-              onKeyUp={handleEnter}
-            />
-            <div className="absolute bottom-1 right-[110px] font-normal text-[#8a8a8a] text-[10px]">
-              {messageLength}/500
-            </div>
-            <Button
-              className="w-20 h-full absolute right-0 bg-[#6d60bc] hover:bg-[#5d51a9] font-bold rounded-none"
-              onClick={() => send(message)}
-            >
-              Enter
-            </Button>
+        <div className="w-full h-[120px] bottom-0 left-0 flex pt-[4px] px-[4px] pb-[20px] border-t border-solid border-[#e2e2e2] ">
+          <div className="absolute left-0 bottom-[130px] w-full h-[35px] text-white text-xs font-bold rounded-md text-center">
+            {!isScrollAtBottom && (
+              <div
+                className="w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold px-3 py-1 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-xl"
+                onClick={goToLatestMessage}
+              >
+                최신 메세지로 가기
+              </div>
+            )}
           </div>
+
+          <ChatTextarea onEnter={handleEnter} />
 
           <span
             className="text-xs text-[#8a8a8a] absolute bottom-1 left-2"
