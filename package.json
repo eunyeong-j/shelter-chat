@@ -1,6 +1,6 @@
 {
   "name": "shelter-project",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A React project for shelter chat app",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""

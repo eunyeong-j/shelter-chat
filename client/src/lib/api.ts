@@ -41,8 +41,8 @@ export const useCheckUser = () => {
 // Mutations
 export const useSendMessage = () => {
   return useMutation({
-    mutationFn: async (message: Message) => {
-      const res = await axios.post(`${API_URL}/message`, message);
+    mutationFn: async (formData: FormData) => {
+      const res = await axios.post(`${API_URL}/message`, formData);
       return res.data;
     },
   });

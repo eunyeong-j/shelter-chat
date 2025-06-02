@@ -14,6 +14,8 @@ import {
   useUpdateUserName,
 } from "../../lib/api";
 import ChatTextarea from "./ChatTextarea";
+import ImagePreview from "./ImagePreview";
+import ChatTextareaBar from "./ChatTextareaBar";
 
 export const Screen = (): JSX.Element => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -21,7 +23,11 @@ export const Screen = (): JSX.Element => {
 
   // 스크롤 최적화를 위해 임시로 사용, 추후 isRead 적용 후 삭제 예정
   const [messagesLength, setMessagesLength] = useState(0);
-  const [isScrollAtBottom, setIsScrollAtBottom] = useState(false);
+  const [showLatestButton, setShowLatestButton] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<Blob | null>(null);
 
   const {
     data: userData,
@@ -63,12 +69,12 @@ export const Screen = (): JSX.Element => {
   const handleScroll = () => {
     if (chatContainerRef.current) {
       const currentScreenHeight = chatContainerRef.current?.clientHeight;
-      setIsScrollAtBottom(
+      const isScrollAtBottom =
         chatContainerRef.current.scrollHeight -
           chatContainerRef.current.scrollTop -
           currentScreenHeight <
-          currentScreenHeight
-      );
+        currentScreenHeight;
+      setShowLatestButton(!isScrollAtBottom);
     }
   };
 
@@ -104,39 +110,27 @@ export const Screen = (): JSX.Element => {
     }
   }, [messages]);
 
-  // const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-  //   const ele = e.currentTarget;
-  //   const pos = {
-  //     left: ele.scrollLeft,
-  //     top: ele.scrollTop,
-  //     x: e.clientX,
-  //     y: e.clientY,
-  //   };
-
-  //   const mouseMoveHandler = (e: MouseEvent) => {
-  //     const dx = e.clientX - pos.x;
-  //     const dy = e.clientY - pos.y;
-  //     ele.scrollTop = pos.top - dy;
-  //     ele.scrollLeft = pos.left - dx;
-  //   };
-
-  //   const mouseUpHandler = () => {
-  //     document.removeEventListener("mousemove", mouseMoveHandler);
-  //     document.removeEventListener("mouseup", mouseUpHandler);
-  //   };
-
-  //   document.addEventListener("mousemove", mouseMoveHandler);
-  //   document.addEventListener("mouseup", mouseUpHandler);
-  // };
-
   const handleEnter = (text: string) => {
-    const newMessage = {
-      id: 1,
-      userId: userData.user.id,
-      message: text,
-      createdAt: new Date(),
-    };
-    sendMessage(newMessage);
+    const formData = new FormData();
+
+    formData.append("userId", userData.user.id);
+    formData.append("message", text);
+    formData.append("createdAt", new Date().toISOString());
+    if (imageFile) {
+      formData.append("file", imageFile);
+    }
+    sendMessage(formData);
+  };
+
+  const handleEmojiClick = (emojiUrl: string) => {
+    fetch(emojiUrl).then((res) => {
+      res.blob().then((blob) => {
+        if (blob) {
+          setImage(emojiUrl);
+          setImageFile(blob);
+        }
+      });
+    });
   };
 
   if (isServerError) {
@@ -167,7 +161,14 @@ export const Screen = (): JSX.Element => {
   return (
     <div className="relative max-w-[720px] w-full mx-auto bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
       <BackgroundVideo />
-      <div className="w-full h-[100vh] pt-[46px] pb-[120px] relative">
+
+      <ImagePreview
+        showPreview={showPreview}
+        setShowPreview={setShowPreview}
+        previewImageUrl={previewImageUrl}
+      />
+
+      <div className="w-full h-[100vh] pt-[46px] pb-[150px] relative">
         {/* Main Chat Container */}
         <div
           ref={chatContainerRef}
@@ -294,15 +295,40 @@ export const Screen = (): JSX.Element => {
                           className={`rounded-[7px] px-3 py-2 max-w-[950%]`}
                           style={{ backgroundColor: message.bgColor }}
                         >
-                          <p
+                          <div
                             className={`font-normal text-black text-sm break-words whitespace-pre-wrap ${
                               message.deletedAt ? "opacity-40" : ""
                             }`}
                           >
-                            {!message.deletedAt
-                              ? message.message
-                              : "삭제된 메시지 입니다."}
-                          </p>
+                            {!message.deletedAt ? (
+                              <>
+                                {message.imageFile && (
+                                  <div
+                                    className={`w-full flex mb-2 ${
+                                      message.userId === userData.user.id
+                                        ? "justify-end"
+                                        : "justify-start"
+                                    }`}
+                                  >
+                                    <img
+                                      src={`data:image/jpeg;base64,${message.imageFile}`}
+                                      alt="message"
+                                      className={`w-[80px] h-[80px] cursor-pointer`}
+                                      onClick={() => {
+                                        setPreviewImageUrl(
+                                          `data:image/jpeg;base64,${message.imageFile}`
+                                        );
+                                        setShowPreview(true);
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                {message.message}
+                              </>
+                            ) : (
+                              "삭제된 메시지 입니다."
+                            )}
+                          </div>
                         </div>
                         <div
                           className={`flex flex-row gap-1 mx-1 ${
@@ -319,7 +345,7 @@ export const Screen = (): JSX.Element => {
                           {message.userId === userData.user.id &&
                             !message.deletedAt && (
                               <X
-                                className="font-normal text-[#8a8a8a] text-xs self-center text-red-500 hover:text-red-700 cursor-pointer opacity-30 hover:opacity-100 transition-all duration-300"
+                                className="font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer opacity-30 hover:opacity-100 transition-all duration-300"
                                 size={14}
                                 onClick={() =>
                                   message.messageId
@@ -338,11 +364,17 @@ export const Screen = (): JSX.Element => {
         </div>
 
         {/* Message Input Area */}
-        <div className="w-full h-[120px] bottom-0 left-0 flex pt-[4px] px-[4px] pb-[20px] border-t border-solid border-[#e2e2e2] ">
-          <div className="absolute left-0 bottom-[130px] w-full h-[35px] text-white text-xs font-bold rounded-md text-center">
-            {!isScrollAtBottom && (
+        <div className="w-full h-[120px] left-0 flex px-[4px] pt-[30px] border-t border-solid border-[#e2e2e2] ">
+          <ChatTextareaBar onEmojiClick={handleEmojiClick} />
+
+          <div
+            className={`absolute left-0 bottom-[160px] w-full text-white text-xs font-bold rounded-md text-center ${
+              showLatestButton ? "" : "pointer-events-none"
+            }`}
+          >
+            {showLatestButton && (
               <div
-                className="w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold px-3 py-1 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-xl"
+                className={`w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold py-[5px] px-3 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-[50px] cursor-pointer`}
                 onClick={goToLatestMessage}
               >
                 최신 메세지로 가기
@@ -350,13 +382,20 @@ export const Screen = (): JSX.Element => {
             )}
           </div>
 
-          <ChatTextarea onEnter={handleEnter} />
+          <ChatTextarea
+            onEnter={handleEnter}
+            image={image}
+            setImage={setImage}
+            imageFile={imageFile}
+            setImageFile={setImageFile}
+          />
 
           <span
             className="text-xs text-[#8a8a8a] absolute bottom-1 left-2"
             style={{ fontSize: "10px" }}
           >
-            - Last updated: 2025.05.30
+            Last updated: {process.env.VITE_LAST_UPDATED} / version{" "}
+            {process.env.VITE_VERSION}
           </span>
         </div>
       </div>

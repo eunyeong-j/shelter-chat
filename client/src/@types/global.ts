@@ -12,6 +12,7 @@ export type Message = {
   id?: number;
   userId: number;
   message: string;
+  imageFile?: string; // base64
   createdAt: Date;
   // for UI data
   messageId?: number;

@@ -4,6 +4,9 @@ const dotenvFlow = require("dotenv-flow");
 const cors = require("cors");
 const WebSocket = require("ws");
 const app = express();
+const multer = require("multer");
+
+const upload = multer();
 
 dotenvFlow.config({
   path: require("path").resolve(__dirname, ".."), // 루트 디렉토리로 경로 지정
@@ -62,6 +65,7 @@ db.serialize(() => {
   db.run("DROP TABLE IF EXISTS USERS");
   db.run("DROP TABLE IF EXISTS MESSAGES");
   db.run("DROP TABLE IF EXISTS LOGS");
+  db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
 
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
@@ -72,10 +76,17 @@ db.serialize(() => {
   db.run(
     "CREATE TABLE IF NOT EXISTS LOGS (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER, action TEXT, details TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (userId) REFERENCES USERS(id))"
   );
+  db.run(
+    `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
+  );
 
-  db.run("DELETE FROM USERS");
-  db.run("DELETE FROM MESSAGES");
-  db.run("DELETE FROM LOGS");
+  // Delete all data
+  // db.run("DELETE FROM USERS");
+  // db.run("DELETE FROM MESSAGES");
+  // db.run("DELETE FROM LOGS");
+
+  // Delete messages where deletedAt is not null
+  db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
 
   const DEFAULT_USERS = [
     {
@@ -119,6 +130,18 @@ db.serialize(() => {
   });
 });
 */
+
+db.serialize(() => {
+  // 서버 재실행 시 삭제된 메세지만 완전 삭제
+  db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
+  // db.run(`DELETE FROM MESSAGE_FILE`);
+
+  // db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
+
+  // db.run(
+  //   `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
+  // );
+});
 
 app.get("/check-user", (req, res) => {
   const ip =
@@ -218,6 +241,7 @@ app.get("/messages", (req, res) => {
                     NULL as messageId,
                     NULL as userId,
                     strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours')) as message,
+                    NULL as imageFile,
                     strftime('%Y-%m-%d %H:%M:%S', datetime(createdAt, '+9 hours')) as createdAt,
                     NULL as name,
                     NULL as image,
@@ -230,18 +254,21 @@ app.get("/messages", (req, res) => {
                     MESSAGES.id as messageId, 
                     MESSAGES.userId as userId, 
                     MESSAGES.message, 
+                    MESSAGE_FILE.image as imageFile,
                     strftime('%Y-%m-%d %H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
                     USERS.name, 
                     USERS.image, 
                     USERS.bgColor,
                     MESSAGES.deletedAt
               FROM MESSAGES 
+              LEFT JOIN MESSAGE_FILE ON MESSAGES.id = MESSAGE_FILE.messageId
               INNER JOIN USERS ON MESSAGES.userId = USERS.id 
               UNION ALL
               SELECT "LOG" as type,
                     NULL as messageId,
                     LOGS.userId,
                     LOGS.details as message,
+                    NULL as imageFile,
                     strftime('%Y-%m-%d %H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
                     NULL as name,
                     NULL as image,
@@ -257,8 +284,13 @@ app.get("/messages", (req, res) => {
   );
 });
 
-app.post("/message", (req, res) => {
-  const { userId, message } = req.body;
+app.post("/message", upload.single("file"), (req, res) => {
+  const { body, file } = req;
+  const userId = body.userId;
+  const message = body.message;
+
+  const blob = file ? Buffer.from(file.buffer).toString("base64") : null;
+
   db.run(
     "INSERT INTO MESSAGES (userId, message) VALUES (?, ?)",
     [userId, message],
@@ -266,9 +298,25 @@ app.post("/message", (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      // Broadcast message update
-      broadcast({ type: "MESSAGE_UPDATE" });
-      res.json({ id: this.lastID });
+
+      if (blob) {
+        db.run(
+          "INSERT INTO MESSAGE_FILE (messageId, image) VALUES (?, ?)",
+          [this.lastID, blob],
+          function (err) {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
+            // Broadcast message update
+            broadcast({ type: "MESSAGE_UPDATE" });
+            res.json({ id: this.lastID });
+          }
+        );
+      } else {
+        // Broadcast message update
+        broadcast({ type: "MESSAGE_UPDATE" });
+        res.json({ id: this.lastID });
+      }
     }
   );
 });
