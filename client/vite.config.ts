@@ -20,4 +20,28 @@ export default defineConfig({
   define: {
     "process.env": process.env,
   },
+  resolve: {
+    alias: [
+      {
+        find: "@",
+        replacement: path.resolve(__dirname, "src/"),
+      },
+      {
+        find: "@components",
+        replacement: path.resolve(__dirname, "src/components/"),
+      },
+      {
+        find: "@lib",
+        replacement: path.resolve(__dirname, "src/lib/"),
+      },
+      {
+        find: "@pages",
+        replacement: path.resolve(__dirname, "src/pages/"),
+      },
+      {
+        find: "@data",
+        replacement: path.resolve(__dirname, "src/data/"),
+      },
+    ],
+  },
 });

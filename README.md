@@ -1,8 +1,8 @@
 # shelter-chat
 
-Chat Shelter for your needs
+This chat app is a closed system that stores data in the host's local environment.
 
-# Installation
+## Installation
 
 ```
 // cd client
@@ -14,7 +14,7 @@ $ npm i
 $ npm run dev
 ```
 
-# Server Start
+## Server Start
 
 ```
 // root path

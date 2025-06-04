@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Loader2, UsersRound } from "lucide-react";
-import { User } from "../../@types/global";
+import { User } from "global-types";
 
 type UsersProps = {
   users: User[];
@@ -35,7 +35,7 @@ export default function Users(props: UsersProps) {
     <>
       <div
         ref={usersButtonRef}
-        className="absolute right-[20px] top-[10px] text-white font-bold text-2xl cursor-pointer z-10"
+        className="absolute right-[20px] top-[10px] text-white font-bold text-2xl cursor-pointer z-10 "
         onClick={() => setIsOpen(!isOpen)}
       >
         <UsersRound className="w-6 h-6" />
@@ -45,7 +45,7 @@ export default function Users(props: UsersProps) {
         <div
           ref={usersListRef}
           id="users-list"
-          className="absolute right-[20px] top-[50px] flex flex-col gap-1 bg-white rounded-md py-2 px-2 min-w-[200px] max-w-[60vw] border border-solid border-[#e2e2e2]"
+          className="absolute right-[20px] top-[50px] flex flex-col gap-1 bg-white rounded-md py-2 px-2 min-w-[200px] max-w-[60vw] border border-solid border-[#e2e2e2] shadow-lg"
         >
           {isUsersLoading && (
             <div className="flex items-center justify-center h-full">

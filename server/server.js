@@ -133,15 +133,14 @@ db.serialize(() => {
 
 db.serialize(() => {
   // 서버 재실행 시 삭제된 메세지만 완전 삭제
+  db.run(
+    `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
+  );
   db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
-  // db.run(`DELETE FROM MESSAGE_FILE`);
-
   // db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
-
   // db.run(
   //   `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
   // );
-
   // Update user image paths to prepend "/image"
   // db.run(`UPDATE USERS SET image = REPLACE(image, '/images-', '/image-')`);
 });
@@ -349,7 +348,7 @@ app.post("/message", upload.single("file"), (req, res) => {
 app.delete("/message/:id", (req, res) => {
   const { id } = req.params;
   db.run(
-    "UPDATE MESSAGES SET deletedAt = CURRENT_TIMESTAMP WHERE id = ?",
+    "UPDATE MESSAGES SET deletedAt = CURRENT_TIMESTAMP, message = '' WHERE id = ?",
     [id],
     function (err) {
       if (err) {

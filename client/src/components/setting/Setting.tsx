@@ -1,13 +1,14 @@
-import { SeparatorHorizontal, Settings, X } from "lucide-react";
+import { Settings, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { User } from "../../@types/global";
-import SeparatorLine from "../separatorLine/SeparatorLine";
+import SeparatorLine from "@components/separatorLine/SeparatorLine";
+import { DEFAULT_USER_IMAGES } from "@data/default";
+import { User } from "global-types";
 
 interface SettingProps {
   newName: string;
   setNewName: (name: string) => void;
   onUpdateName: (name: string) => void;
-  users: User[];
+  users: Array<User>;
   onUpdateImage: (image: string) => void;
 }
 
@@ -98,15 +99,12 @@ export default function Setting(props: SettingProps) {
               <SeparatorLine />
 
               <div className="flex flex-wrap gap-2 ">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((id) => {
-                  const isSelected =
-                    selectedImage === `/images/image-${id}.png`;
+                {DEFAULT_USER_IMAGES.map((image, index) => {
+                  const isSelected = selectedImage === image;
                   const isDisabled = users.some((user) =>
-                    user.image.includes(`/image-${id}.png`)
+                    user.image.includes(image)
                   );
-                  const user = users.find((user) =>
-                    user.image.includes(`/image-${id}.png`)
-                  );
+                  const user = users.find((user) => user.image.includes(image));
                   return (
                     <div className="relative flex items-center justify-center">
                       {user && (
@@ -119,10 +117,9 @@ export default function Setting(props: SettingProps) {
                         </div>
                       )}
                       <img
-                        key={id}
-                        src={`/images/image-${id}.png`}
-                        alt={`default-icon-${id}`}
-                        data-id={id}
+                        key={index}
+                        src={image}
+                        alt={`default-icon-${index}`}
                         className={
                           "w-[40px] h-[40px] rounded-full" +
                           (isDisabled
@@ -134,7 +131,7 @@ export default function Setting(props: SettingProps) {
                         }
                         onClick={() => {
                           if (isDisabled) return;
-                          setSelectedImage(`/images/image-${id}.png`);
+                          setSelectedImage(image);
                         }}
                       />
                     </div>
