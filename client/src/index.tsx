@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Screen } from "./screens/Screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Screen from "./pages/Screen";
 
 const queryClient = new QueryClient();
 

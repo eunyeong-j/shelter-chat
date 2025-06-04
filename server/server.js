@@ -141,6 +141,9 @@ db.serialize(() => {
   // db.run(
   //   `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
   // );
+
+  // Update user image paths to prepend "/image"
+  // db.run(`UPDATE USERS SET image = REPLACE(image, '/images-', '/image-')`);
 });
 
 app.get("/check-user", (req, res) => {
@@ -207,6 +210,28 @@ app.put("/user/:id/name", (req, res) => {
         }
       );
 
+      res.json({ success: true });
+    }
+  );
+});
+
+app.put("/user/:id/image", (req, res) => {
+  const { id } = req.params;
+  const { image } = req.body;
+
+  db.run(
+    "UPDATE USERS SET image = ? WHERE id = ?",
+    [image, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      // Broadcast user update
+      broadcast({ type: "USER_UPDATE" });
+      broadcast({ type: "MESSAGE_UPDATE" });
       res.json({ success: true });
     }
   );

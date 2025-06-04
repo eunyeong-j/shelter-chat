@@ -20,7 +20,7 @@ export default function ImagePreview(props: {
       <img
         src={previewImageUrl}
         alt="message"
-        className={`w-[70vw] h-auto cursor-default border border-solid border-[#d9d9d9] rounded-[12.5px] p-0`}
+        className={`h-auto max-w-[60vw] max-h-[70vh] object-contain cursor-default border border-solid border-[#d9d9d9] rounded-[12.5px] p-0`}
       />
     </div>
   );

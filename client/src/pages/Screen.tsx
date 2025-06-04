@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { UserMessage } from "../../@types/global";
-import { Setting } from "./Setting";
-import { Users } from "./Users";
-import { BackgroundVideo } from "../../components/BackgroundVideo";
-import { websocketService } from "../../lib/websocket";
+import { UserMessage } from "../@types/global";
+import Setting from "../components/setting/Setting";
+import Users from "../components/users/Users";
+import { BackgroundVideo } from "../components/backgroundVideo/BackgroundVideo";
+import { websocketService } from "../lib/websocket";
 import {
   useDeleteMessage,
   useCheckUser,
@@ -12,12 +12,15 @@ import {
   useMessages,
   useSendMessage,
   useUpdateUserName,
-} from "../../lib/api";
-import ChatTextarea from "./ChatTextarea";
-import ImagePreview from "./ImagePreview";
-import ChatTextareaBar from "./ChatTextareaBar";
+  useUpdateUserImage,
+} from "../lib/api";
+import ChatTextarea from "../components/chatTextarea/ChatTextarea";
+import ImagePreview from "../components/imagePreview/ImagePreview";
+import ChatTextareaBar from "../components/chatTextarea/ChatTextareaBar";
+import GoToLatestButton from "../components/goToLatestButton/GoToLatestButton";
+import LastUpdatedVersion from "../components/lastUpdatedVersion/LastUpdatedVersion";
 
-export const Screen = (): JSX.Element => {
+export default function Screen() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [newName, setNewName] = useState("");
 
@@ -52,16 +55,17 @@ export const Screen = (): JSX.Element => {
   const { mutate: sendMessage } = useSendMessage();
   const { mutate: updateUserName } = useUpdateUserName();
   const { mutate: deleteMessage } = useDeleteMessage();
+  const { mutate: updateUserImage } = useUpdateUserImage();
 
   const isServerError = useMemo(() => {
     return isUsersError || isMessagesError || isIpError;
   }, [isUsersError, isMessagesError, isIpError]);
 
-  const goToLatestMessage = () => {
+  const goToLatestMessage = (behavior: "smooth" | "instant") => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth",
+        behavior: behavior,
       });
     }
   };
@@ -105,7 +109,7 @@ export const Screen = (): JSX.Element => {
       setMessagesLength(messages.length);
 
       if (messagesLength < messages.length) {
-        goToLatestMessage();
+        goToLatestMessage("instant");
       }
     }
   }, [messages]);
@@ -182,13 +186,10 @@ export const Screen = (): JSX.Element => {
               직딩 임시 대피소
             </h1>
 
-            <Users
-              users={users}
-              isUsersLoading={isUsersLoading}
-              refetchUsers={refetchUsers}
-            />
+            <Users users={users} isUsersLoading={isUsersLoading} />
 
             <Setting
+              users={users}
               newName={newName}
               onNameChange={setNewName}
               onUpdateName={() => {
@@ -198,6 +199,12 @@ export const Screen = (): JSX.Element => {
                   newName: newName,
                 });
                 setNewName("");
+              }}
+              onUpdateImage={(image: string) => {
+                updateUserImage({
+                  userId: userData.user.id,
+                  image: image,
+                });
               }}
             />
           </header>
@@ -262,11 +269,18 @@ export const Screen = (): JSX.Element => {
                     >
                       {!isContinueMessage && (
                         <div
-                          className={`w-[45px] h-[45px]  ${
+                          className={`w-[45px] h-[45px] cursor-pointer ${
                             isContinueMessage ? "my-0" : "mt-[14px]"
                           }`}
                         >
-                          <img src={message.image} alt={message.name} />
+                          <img
+                            src={`${message.image}`}
+                            alt={message.name}
+                            onClick={() => {
+                              setPreviewImageUrl(`${message.image}`);
+                              setShowPreview(true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>
@@ -367,20 +381,10 @@ export const Screen = (): JSX.Element => {
         <div className="w-full h-[120px] left-0 flex px-[4px] pt-[30px] border-t border-solid border-[#e2e2e2] ">
           <ChatTextareaBar onEmojiClick={handleEmojiClick} />
 
-          <div
-            className={`absolute left-0 bottom-[160px] w-full text-white text-xs font-bold rounded-md text-center ${
-              showLatestButton ? "" : "pointer-events-none"
-            }`}
-          >
-            {showLatestButton && (
-              <div
-                className={`w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold py-[5px] px-3 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-[50px] cursor-pointer`}
-                onClick={goToLatestMessage}
-              >
-                최신 메세지로 가기
-              </div>
-            )}
-          </div>
+          <GoToLatestButton
+            showLatestButton={showLatestButton}
+            goToLatestMessage={() => goToLatestMessage("smooth")}
+          />
 
           <ChatTextarea
             onEnter={handleEnter}
@@ -390,15 +394,9 @@ export const Screen = (): JSX.Element => {
             setImageFile={setImageFile}
           />
 
-          <span
-            className="text-xs text-[#8a8a8a] absolute bottom-1 left-2"
-            style={{ fontSize: "10px" }}
-          >
-            Last updated: {process.env.VITE_LAST_UPDATED} / version{" "}
-            {process.env.VITE_VERSION}
-          </span>
+          <LastUpdatedVersion />
         </div>
       </div>
     </div>
   );
-};
+}

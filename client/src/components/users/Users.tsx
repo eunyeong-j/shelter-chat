@@ -2,14 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { Loader2, UsersRound } from "lucide-react";
 import { User } from "../../@types/global";
 
-export const Users = ({
-  users,
-  isUsersLoading,
-}: {
+type UsersProps = {
   users: User[];
   isUsersLoading: boolean;
-  refetchUsers: () => void;
-}) => {
+};
+
+export default function Users(props: UsersProps) {
+  const { users, isUsersLoading } = props;
   const [isOpen, setIsOpen] = useState(false);
   const usersListRef = useRef<HTMLDivElement>(null);
   const usersButtonRef = useRef<HTMLDivElement>(null);
@@ -61,7 +60,7 @@ export const Users = ({
                 className="flex items-center mb-1 gap-3"
               >
                 <div className="w-[45px] h-[45px] select-none">
-                  <img src={user.image} alt={user.name} />
+                  <img src={`${user.image}`} alt={user.name} />
                 </div>
                 <span
                   className={` font-normal text-black text-sm w-max cursor-default`}
@@ -74,4 +73,4 @@ export const Users = ({
       )}
     </>
   );
-};
+}

@@ -68,6 +68,23 @@ export const useUpdateUserName = () => {
   });
 };
 
+export const useUpdateUserImage = () => {
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      image,
+    }: {
+      userId: number;
+      image: string;
+    }) => {
+      const res = await axios.put(`${API_URL}/user/${userId}/image`, {
+        image,
+      });
+      return res.data;
+    },
+  });
+};
+
 export const useUpdateUserBgColor = () => {
   return useMutation({
     mutationFn: async ({
