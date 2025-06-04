@@ -137,12 +137,14 @@ db.serialize(() => {
     `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
   );
   db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
-  // db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
+
+  // Update DS user's IP
+  db.run("UPDATE USERS SET IP = ? WHERE name = ?", ["192.168.0.5", "DS"]);
+
+  // db.run("DROP TABLE IF EXISTS MESSAGE_REACTION");
   // db.run(
-  //   `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
+  //   `CREATE TABLE IF NOT EXISTS MESSAGE_REACTION (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, userId INTEGER NOT NULL, type TEXT, FOREIGN KEY (messageId) REFERENCES MESSAGES(id), FOREIGN KEY (userId) REFERENCES USERS(id))`
   // );
-  // Update user image paths to prepend "/image"
-  // db.run(`UPDATE USERS SET image = REPLACE(image, '/images-', '/image-')`);
 });
 
 app.get("/check-user", (req, res) => {
@@ -260,7 +262,7 @@ app.put("/user/:id/bgColor", (req, res) => {
 app.get("/messages", (req, res) => {
   db.all(
     `SELECT * 
-       FROM (
+      FROM (
             SELECT "DATE" as type,
                     NULL as messageId,
                     NULL as userId,
@@ -270,11 +272,12 @@ app.get("/messages", (req, res) => {
                     NULL as name,
                     NULL as image,
                     NULL as bgColor,
-                    NULL as deletedAt
-               FROM MESSAGES
-               GROUP BY strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours'))
-               UNION ALL
-               SELECT "MSG" as type,
+                    NULL as deletedAt,
+                    NULL as reactions
+              FROM MESSAGES
+              GROUP BY strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours'))
+              UNION ALL
+              SELECT "MSG" as type,
                     MESSAGES.id as messageId, 
                     MESSAGES.userId as userId, 
                     MESSAGES.message, 
@@ -283,10 +286,19 @@ app.get("/messages", (req, res) => {
                     USERS.name, 
                     USERS.image, 
                     USERS.bgColor,
-                    MESSAGES.deletedAt
+                    MESSAGES.deletedAt,
+                    (
+                      SELECT GROUP_CONCAT(type || ':' || cnt, ',')
+                      FROM (
+                        SELECT type, COUNT(*) as cnt
+                        FROM MESSAGE_REACTION
+                        WHERE messageId = MESSAGES.id
+                        GROUP BY type
+                      )
+                    ) as reactions
               FROM MESSAGES 
               LEFT JOIN MESSAGE_FILE ON MESSAGES.id = MESSAGE_FILE.messageId
-              INNER JOIN USERS ON MESSAGES.userId = USERS.id 
+              INNER JOIN USERS ON MESSAGES.userId = USERS.id
               UNION ALL
               SELECT "LOG" as type,
                     NULL as messageId,
@@ -297,10 +309,10 @@ app.get("/messages", (req, res) => {
                     NULL as name,
                     NULL as image,
                     NULL as bgColor,
-                    NULL as deletedAt
-               FROM LOGS)
-      ORDER BY createdAt ASC
-     `,
+                    NULL as deletedAt,
+                    NULL as reactions
+              FROM LOGS)
+      ORDER BY createdAt ASC`,
     [],
     (err, rows) => {
       res.json(rows);
@@ -357,6 +369,51 @@ app.delete("/message/:id", (req, res) => {
       // Broadcast message update
       broadcast({ type: "MESSAGE_UPDATE" });
       res.json({ success: true });
+    }
+  );
+});
+
+app.post("/message/:messageId/reaction", (req, res) => {
+  const { messageId } = req.params;
+  const { type, userId } = req.body;
+
+  // Check if reaction already exists
+  db.get(
+    "SELECT id FROM MESSAGE_REACTION WHERE messageId = ? AND userId = ? AND type = ?",
+    [messageId, userId, type],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (row) {
+        // If reaction exists, delete it
+        db.run(
+          "DELETE FROM MESSAGE_REACTION WHERE messageId = ? AND userId = ? AND type = ?",
+          [messageId, userId, type],
+          function (err) {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
+            broadcast({ type: "MESSAGE_UPDATE" });
+            return res.json({ success: true });
+          }
+        );
+      } else {
+        // If reaction does not exist, create it
+        db.run(
+          "INSERT INTO MESSAGE_REACTION (messageId, userId, type) VALUES (?, ?, ?)",
+          [messageId, userId, type],
+          function (err) {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
+            // Broadcast message update
+            broadcast({ type: "MESSAGE_UPDATE" });
+            res.json({ success: true });
+          }
+        );
+      }
     }
   );
 });

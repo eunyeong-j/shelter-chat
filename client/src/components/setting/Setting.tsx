@@ -111,7 +111,7 @@ export default function Setting(props: SettingProps) {
                         <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
                           <span className="text-xs font-bold text-[#6d60bc]">
                             {user.name.length > 3
-                              ? user.name.slice(0, 3) + "..."
+                              ? user.name.slice(0, 2) + "..."
                               : user.name}
                           </span>
                         </div>

@@ -10,6 +10,7 @@ import {
   useSendMessage,
   useUpdateUserName,
   useUpdateUserImage,
+  useAddReaction,
 } from "@lib/api";
 import ChatTextarea from "@components/chatTextarea/ChatTextarea";
 import ImagePreview from "@components/imagePreview/ImagePreview";
@@ -53,6 +54,7 @@ export default function Screen() {
   const { mutate: updateUserName } = useUpdateUserName();
   const { mutate: deleteMessage } = useDeleteMessage();
   const { mutate: updateUserImage } = useUpdateUserImage();
+  const { mutate: addReaction } = useAddReaction();
 
   const isServerError = useMemo(() => {
     return isUsersError || isMessagesError || isIpError;
@@ -181,7 +183,7 @@ export default function Screen() {
           setShowPreview={setShowPreview}
           deleteMessage={deleteMessage}
           chatContainerRef={chatContainerRef}
-          handleScroll={handleScroll}
+          onScroll={handleScroll}
           newName={newName}
           setNewName={setNewName}
           onUpdateName={(newName) => {
@@ -198,14 +200,21 @@ export default function Screen() {
               image: newImage,
             });
           }}
+          onReaction={(messageId, type) => {
+            addReaction({
+              messageId: messageId,
+              userId: userData.user.id,
+              type: type,
+            });
+          }}
         />
 
         {/* Message Input Area */}
+        <GoToLatestButton
+          showLatestButton={showLatestButton}
+          goToLatestMessage={() => goToLatestMessage("smooth")}
+        />
         <div className="w-full h-[120px] left-0 flex px-[4px] pt-[30px] border-t border-solid border-[#e2e2e2] ">
-          <GoToLatestButton
-            showLatestButton={showLatestButton}
-            goToLatestMessage={() => goToLatestMessage("smooth")}
-          />
           <ChatTextarea
             onEnter={handleEnter}
             image={image}

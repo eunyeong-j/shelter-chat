@@ -84,6 +84,26 @@ export const useUpdateUserImage = () => {
   });
 };
 
+export const useAddReaction = () => {
+  return useMutation({
+    mutationFn: async ({
+      messageId,
+      userId,
+      type,
+    }: {
+      messageId: number;
+      userId: number;
+      type: string;
+    }) => {
+      const res = await axios.post(`${API_URL}/message/${messageId}/reaction`, {
+        userId,
+        type,
+      });
+      return res.data;
+    },
+  });
+};
+
 export const useUpdateUserBgColor = () => {
   return useMutation({
     mutationFn: async ({

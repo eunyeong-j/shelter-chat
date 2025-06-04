@@ -13,7 +13,7 @@ export default function GoToLatestButton(props: GoToLatestButtonProps) {
     >
       {showLatestButton && (
         <div
-          className={`w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold py-[5px] px-3 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-[50px] cursor-pointer z-10`}
+          className={`w-auto h-full mx-auto text-[#6d5fbb] text-xs font-bold py-[5px] px-3 bg-white border border-solid border-[#6d5fbb] inline-flex items-center justify-center rounded-[50px] cursor-pointer z-20`}
           onClick={() => goToLatestMessage("smooth")}
         >
           최신 메세지로 가기

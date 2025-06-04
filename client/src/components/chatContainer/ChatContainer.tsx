@@ -1,15 +1,23 @@
-import Setting from "@components/setting/Setting";
 import { UserMessage, User } from "global-types";
-import Users from "@components/users/Users";
 import { X } from "lucide-react";
+import LogMessage from "./logMessage/LogMessage";
+import DateMessage from "./dateMessage/DateMessage";
+import NoHistory from "./noHistory/NoHistory";
+import ChatReaction from "./chatReaction/ChatReaction";
+import { useState } from "react";
+import ChatHeader from "./chatHeader/ChatHeader";
+
+import "./style.scss";
+import { DEFAULT_REACTION_LIST } from "@data/default";
 
 type ChatContainerProps = {
   chatContainerRef: React.RefObject<HTMLDivElement>;
-  handleScroll: () => void;
+  onScroll: () => void;
   newName: string;
   setNewName: (name: string) => void;
   onUpdateName: (newName: string) => void;
   onUpdateImage: (newImage: string) => void;
+  onReaction: (messageId: number, type: string) => void;
   messages: Array<UserMessage>;
   isMessagesLoading: boolean;
   userId: number;
@@ -22,11 +30,12 @@ type ChatContainerProps = {
 export default function ChatContainer(props: ChatContainerProps) {
   const {
     chatContainerRef,
-    handleScroll,
+    onScroll,
     newName,
     setNewName,
     onUpdateName,
     onUpdateImage,
+    onReaction,
     messages,
     isMessagesLoading,
     userId,
@@ -37,140 +46,160 @@ export default function ChatContainer(props: ChatContainerProps) {
     deleteMessage,
   } = props;
 
+  const [isReactionOpen, setIsReactionOpen] = useState<boolean>(false);
+  const [reactionTargetId, setReactionTargetId] = useState<number | null>(null);
+
+  const handleReactionClick = (type: string) => {
+    if (reactionTargetId) {
+      onReaction(reactionTargetId, type);
+    }
+  };
+
+  const handleScroll = () => {
+    setIsReactionOpen(false);
+    setReactionTargetId(null);
+    onScroll();
+  };
+
   return (
     <div
       ref={chatContainerRef}
       id="chat-container"
-      className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px] scrollbar px-0"
+      className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px] pb-[50px] scrollbar px-0"
       onScroll={handleScroll}
     >
       {/* Header */}
-      <header className="absolute w-full h-[45px] top-0 left-0 bg-[#6d5fbb] shadow-[0px_4px_4px_#a3a3a340] flex items-center z-10">
-        <h1 className="ml-[45px] font-bold text-white text-lg ">
-          직딩 임시 대피소
-        </h1>
+      <ChatHeader
+        users={users}
+        isUsersLoading={isUsersLoading}
+        newName={newName}
+        setNewName={setNewName}
+        onUpdateName={onUpdateName}
+        onUpdateImage={onUpdateImage}
+      />
 
-        <Users users={users} isUsersLoading={isUsersLoading} />
+      <NoHistory />
 
-        <Setting
-          users={users}
-          newName={newName}
-          setNewName={setNewName}
-          onUpdateName={onUpdateName}
-          onUpdateImage={onUpdateImage}
-        />
-      </header>
-
-      <div className="w-full relative h-[100px] flex flex-col items-center">
-        {/* Previous chat message */}
-        <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[100px] flex items-center justify-center select-none">
-          이전 대화가 존재하지 않습니다.
-        </p>
-      </div>
+      <ChatReaction
+        isReactionOpen={isReactionOpen}
+        setIsReactionOpen={setIsReactionOpen}
+        reactionTargetId={reactionTargetId}
+        onReactionClick={handleReactionClick}
+      />
 
       {/* Chat Messages */}
       {!isMessagesLoading &&
         messages.length > 0 &&
         messages.map((message: UserMessage, index: number) => {
-          const isContinueMessage =
+          if (message?.type === "DATE") {
+            return <DateMessage message={message} index={index} />;
+          }
+          if (message?.type === "LOG") {
+            return <LogMessage message={message} index={index} />;
+          }
+
+          const createdTime = message.createdAt.toLocaleString().split(" ")[1];
+          const isMine = message.userId === userId;
+          const isDeleted = message.deletedAt !== null;
+          const isContinue =
             index !== 0 &&
             messages[index - 1].type !== "LOG" &&
             message.userId === messages[index - 1].userId;
-
-          if (message?.type === "DATE") {
-            return (
-              <div
-                key={`date-${message.id}-${index}`}
-                className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]"
-              >
-                <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-[1]">
-                  <span className="font-normal text-[#8a8a8a] text-xs text-center">
-                    {message.message}
-                  </span>
-                </div>
-                <div className="w-full h-px absolute top-6 shrink-0 bg-border" />
-              </div>
-            );
-          }
-
-          if (message?.type === "LOG") {
-            return (
-              <div key={`log-${message.id}-${index}`} className="relative">
-                <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] my-[20px] flex items-center justify-center select-none">
-                  ({message.createdAt.toLocaleString()}) {message.message}
-                </p>
-              </div>
-            );
-          }
+          const reactions = message.reactions?.split(",");
+          const isReaction = reactions && reactions.length > 0;
 
           return (
-            <div key={`${message.id}-${index}`} className="relative">
+            <div
+              key={`${message.id}-${index}`}
+              className="message-container relative"
+              data-message-id={message.messageId}
+              data-is-mine={isMine ? "Y" : "N"}
+              data-is-deleted={isDeleted ? "Y" : "N"}
+              data-is-continue={isContinue ? "Y" : "N"}
+              data-is-reaction={isReaction ? "Y" : "N"}
+            >
               <div
-                className={`flex items-start gap-2 mx-4 ${
-                  isContinueMessage ? "mt-2" : "mt-4"
-                } ${
-                  message.userId === userId
-                    ? "justify-flex-start flex-row-reverse"
-                    : "justify-start"
-                }`}
+                className={`message-content-container flex items-start gap-2 mt-4 px-14`}
               >
-                <div
-                  className={`flex flex-col items-center gap-1 ${
-                    isContinueMessage ? "mx-[23px]" : ""
-                  }`}
-                >
-                  {!isContinueMessage && (
-                    <div
-                      className={`w-[45px] h-[45px] cursor-pointer ${
-                        isContinueMessage ? "my-0" : "mt-[14px]"
-                      }`}
-                    >
-                      <img
-                        src={`${message.image}`}
-                        alt={message.name}
-                        onClick={() => {
-                          setPreviewImageUrl(`${message.image}`);
-                          setShowPreview(true);
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+                {/* 사용자 이미지 */}
+                {!isContinue && (
+                  <div
+                    className={`message-user-image absolute top-[16px] left-[4px] flex`}
+                  >
+                    <img
+                      src={`${message.image}`}
+                      alt={message.name}
+                      className={`w-[45px] h-[45px] cursor-pointer`}
+                      onClick={() => {
+                        setPreviewImageUrl(`${message.image}`);
+                        setShowPreview(true);
+                      }}
+                    />
+                  </div>
+                )}
 
-                <div className={`flex flex-col gap-1`}>
-                  {!isContinueMessage && (
+                {/* 메시지 내용 */}
+                <div className={`message-content flex flex-col gap-1`}>
+                  {!isContinue && (
                     <span
-                      className={`text-xs font-bold text-[#595959] ${
-                        message.userId === userId ? "text-right" : "text-left"
-                      }`}
+                      className={`message-user-name text-xs font-bold text-[#595959] text-left`}
                     >
                       {message.name}
                     </span>
                   )}
 
                   <div
-                    className={`flex flex-row gap-1 items-end ${
-                      message.userId === userId ? "flex-row-reverse" : ""
-                    }`}
+                    className={`message-content-text-container flex flex-row gap-1 items-end`}
                   >
                     <div
-                      className={`rounded-[7px] px-3 py-2 max-w-[80%]`}
+                      className={`message-content-text-container-inner relative rounded-[7px] px-3 py-2 max-w-[80%]`}
                       style={{ backgroundColor: message.bgColor }}
+                      data-message-id={message.messageId}
+                      onMouseEnter={() => {
+                        setIsReactionOpen(true);
+                        setReactionTargetId(message?.messageId ?? null);
+                      }}
                     >
+                      {/* 사용자 반응 */}
+                      {message.reactions && (
+                        <div className="message-content-reactions absolute w-full bottom-[-22px] left-[5px] flex gap-2">
+                          {reactions?.map((reaction) => {
+                            const [type, count] = reaction.split(":");
+                            const reactionIcon = DEFAULT_REACTION_LIST.find(
+                              (reaction) => reaction.type === type
+                            );
+                            if (!reactionIcon) {
+                              return null;
+                            }
+                            return (
+                              <div
+                                className="relative message-reaction-icon-container cursor-pointer hover:scale-110 transition-all duration-300"
+                                onClick={() => handleReactionClick(type)}
+                              >
+                                <div className="message-reaction-icon">
+                                  <img
+                                    src={reactionIcon?.src}
+                                    alt={reactionIcon?.alt}
+                                    className="w-4 h-4"
+                                  />
+                                </div>
+                                <div className="message-reaction-count absolute top-[-3px] right-[-3px] bg-red-400 text-white text-[9px] rounded-full w-3 h-3 flex items-center justify-center">
+                                  {count}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       <div
-                        className={`font-normal text-black text-sm break-words whitespace-pre-wrap ${
-                          message.deletedAt ? "opacity-40" : ""
-                        }`}
+                        className={`message-content-text font-normal text-black text-sm break-words whitespace-pre-wrap`}
                       >
-                        {!message.deletedAt ? (
+                        {!isDeleted ? (
                           <>
                             {message.imageFile && (
                               <div
-                                className={`w-full flex mb-2 ${
-                                  message.userId === userId
-                                    ? "justify-end"
-                                    : "justify-start"
-                                }`}
+                                className={`message-content-image w-full flex mb-2 justify-start`}
                               >
                                 <img
                                   src={`data:image/jpeg;base64,${message.imageFile}`}
@@ -192,17 +221,17 @@ export default function ChatContainer(props: ChatContainerProps) {
                         )}
                       </div>
                     </div>
+
+                    {/* 메시지 시간 및 삭제 버튼 */}
                     <div
-                      className={`flex flex-row gap-1 mx-1 ${
-                        message.userId === userId ? "flex-row-reverse" : ""
-                      }`}
+                      className={`message-details flex flex-row gap-1 mx-1 `}
                     >
                       <span
                         className={`font-normal text-[#adadad] text-xs self-center pb-1 select-none`}
                       >
-                        {message.createdAt.toLocaleString().split(" ")[1]}
+                        {createdTime}
                       </span>
-                      {message.userId === userId && !message.deletedAt && (
+                      {isMine && !isDeleted && (
                         <X
                           className="font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer opacity-30 hover:opacity-100 transition-all duration-300"
                           size={14}

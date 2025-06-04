@@ -18,6 +18,7 @@ declare module "global-types" {
     // for UI data
     messageId?: number;
     type?: "DATE" | "MSG" | "LOG";
+    reactions?: string;
   };
 
   export interface UserMessage extends Message, User {}

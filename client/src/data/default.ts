@@ -24,3 +24,36 @@ export const DEFAULT_USER_IMAGES = [
   `/images/image-11.png`,
   `/images/image-12.png`,
 ];
+
+export const DEFAULT_REACTION_LIST = [
+  {
+    type: "PLUS",
+    src: "/reaction/+1.png",
+    alt: "chat-reaction-icon +1",
+  },
+  {
+    type: "CHECK",
+    src: "/reaction/white_check_mark.png",
+    alt: "chat-reaction-icon laugh",
+  },
+  {
+    type: "CLAP",
+    src: "/reaction/clap.png",
+    alt: "chat-reaction-icon clap",
+  },
+  {
+    type: "FIRE",
+    src: "/reaction/fire.png",
+    alt: "chat-reaction-icon fire",
+  },
+  {
+    type: "SCREAM",
+    src: "/reaction/scream.png",
+    alt: "chat-reaction-icon scream",
+  },
+  {
+    type: "BEE",
+    src: "/reaction/bee.png",
+    alt: "chat-reaction-icon bee",
+  },
+];

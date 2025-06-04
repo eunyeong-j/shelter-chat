@@ -12,7 +12,7 @@ export default function ImagePreview(props: {
     <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/50 z-20">
       <X
         className="absolute top-[40px] right-[40px] font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer hover:opacity-100  bg-white rounded-full"
-        size={70}
+        size={50}
         onClick={() => {
           setShowPreview(false);
         }}

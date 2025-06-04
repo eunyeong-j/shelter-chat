@@ -1,0 +1,46 @@
+.message-container {
+  // isMine 속성이 Y인 경우 메시지 방향 우측으로 전환
+  &[data-is-mine="Y"] {
+    .message-content-container {
+      flex-direction: row-reverse;
+      justify-content: flex-start;
+    }
+    .message-user-image {
+      right: 4px;
+      flex-direction: row-reverse;
+    }
+    .message-user-name {
+      text-align: right;
+    }
+    .message-details {
+      flex-direction: row-reverse;
+    }
+    .message-content-image {
+      justify-content: flex-end;
+    }
+    .message-content-text-container {
+      flex-direction: row-reverse;
+    }
+    .message-content-reactions {
+      flex-direction: row-reverse;
+    }
+  }
+
+  &[data-is-continue="Y"] {
+    .message-content-container {
+      margin-top: 4px;
+    }
+  }
+
+  &[data-is-deleted="Y"] {
+    .message-content-text {
+      opacity: 0.4;
+    }
+  }
+
+  &[data-is-reaction="Y"] {
+    .message-content-text-container {
+      margin-bottom: 25px;
+    }
+  }
+}

@@ -11,6 +11,8 @@
     "dotenv-cli": "^8.0.0"
   },
   "dependencies": {
-    "dotenv-flow": "^4.1.0"
+    "dotenv-flow": "^4.1.0",
+    "sass": "^1.89.1",
+    "sass-loader": "^16.0.5"
   }
 }
