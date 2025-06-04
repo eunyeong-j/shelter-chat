@@ -66,6 +66,7 @@ db.serialize(() => {
   db.run("DROP TABLE IF EXISTS MESSAGES");
   db.run("DROP TABLE IF EXISTS LOGS");
   db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
+  db.run("DROP TABLE IF EXISTS MESSAGE_REACTION");
 
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
@@ -139,12 +140,7 @@ db.serialize(() => {
   db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
 
   // Update DS user's IP
-  db.run("UPDATE USERS SET IP = ? WHERE name = ?", ["192.168.0.5", "DS"]);
-
-  // db.run("DROP TABLE IF EXISTS MESSAGE_REACTION");
-  // db.run(
-  //   `CREATE TABLE IF NOT EXISTS MESSAGE_REACTION (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, userId INTEGER NOT NULL, type TEXT, FOREIGN KEY (messageId) REFERENCES MESSAGES(id), FOREIGN KEY (userId) REFERENCES USERS(id))`
-  // );
+  // db.run("UPDATE USERS SET IP = ? WHERE name = ?", ["192.168.0.5", "DS"]);
 });
 
 app.get("/check-user", (req, res) => {
