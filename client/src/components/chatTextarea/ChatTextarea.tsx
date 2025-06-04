@@ -68,7 +68,7 @@ export default function ChatTextarea(props: ChatTextareaProps) {
         <div className="absolute top-[-6.5rem] left-1 font-normal text-[#8a8a8a] text-[10px] p-1 bg-white border border-solid border-[#e2e2e2] rounded-md shadow-sm">
           <div className="relative">
             <X
-              className="absolute top-[3px] right-[3px] font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer hover:opacity-100  bg-white rounded-full"
+              className="absolute top-[3px] right-[3px] font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer hover:opacity-100 bg-white rounded-full"
               size={14}
               onClick={() => {
                 setImage(null);
@@ -76,7 +76,11 @@ export default function ChatTextarea(props: ChatTextareaProps) {
                 textareaRef.current?.focus();
               }}
             />
-            <img src={image} alt="pasted" className="w-[60px] h-[60px]" />
+            <img
+              src={image}
+              alt="pasted"
+              className="w-[60px] h-[60px] object-contain rounded-md"
+            />
           </div>
         </div>
       )}

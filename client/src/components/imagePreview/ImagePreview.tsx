@@ -9,7 +9,7 @@ export default function ImagePreview(props: {
 
   if (!showPreview) return null;
   return (
-    <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black/50 z-20">
+    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/50 z-20">
       <X
         className="absolute top-[40px] right-[40px] font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer hover:opacity-100  bg-white rounded-full"
         size={70}
@@ -20,7 +20,7 @@ export default function ImagePreview(props: {
       <img
         src={previewImageUrl}
         alt="message"
-        className={`h-auto max-w-[60vw] max-h-[70vh] object-contain cursor-default border border-solid border-[#d9d9d9] rounded-[12.5px] p-0`}
+        className={`h-auto max-w-[60vw] max-h-[70vh] object-contain cursor-default border border-solid border-[#d9d9d9] p-0`}
       />
     </div>
   );

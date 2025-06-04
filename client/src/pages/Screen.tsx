@@ -163,7 +163,7 @@ export default function Screen() {
   }
 
   return (
-    <div className="relative max-w-[720px] w-full mx-auto bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
+    <div className="relative max-w-[600px] w-full mx-auto h-full bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
       <BackgroundVideo />
 
       <ImagePreview
@@ -191,7 +191,7 @@ export default function Screen() {
             <Setting
               users={users}
               newName={newName}
-              onNameChange={setNewName}
+              setNewName={setNewName}
               onUpdateName={() => {
                 updateUserName({
                   userId: userData.user.id,
@@ -231,12 +231,12 @@ export default function Screen() {
                     key={`date-${message.id}-${index}`}
                     className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]"
                   >
-                    <div className="w-full h-px absolute top-6 shrink-0 bg-border" />
-                    <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-10">
+                    <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-[1]">
                       <span className="font-normal text-[#8a8a8a] text-xs text-center">
                         {message.message}
                       </span>
                     </div>
+                    <div className="w-full h-px absolute top-6 shrink-0 bg-border" />
                   </div>
                 );
               }
@@ -244,7 +244,7 @@ export default function Screen() {
               if (message?.type === "LOG") {
                 return (
                   <div key={`log-${message.id}-${index}`} className="relative">
-                    <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] h-[50px] flex items-center justify-center select-none">
+                    <p className="w-full font-normal text-[#8a8a8a] text-xs text-center font-sans tracking-[0] leading-[normal] my-[20px] flex items-center justify-center select-none">
                       ({message.createdAt.toLocaleString()}) {message.message}
                     </p>
                   </div>
@@ -306,7 +306,7 @@ export default function Screen() {
                         }`}
                       >
                         <div
-                          className={`rounded-[7px] px-3 py-2 max-w-[950%]`}
+                          className={`rounded-[7px] px-3 py-2 max-w-[80%]`}
                           style={{ backgroundColor: message.bgColor }}
                         >
                           <div
@@ -327,7 +327,7 @@ export default function Screen() {
                                     <img
                                       src={`data:image/jpeg;base64,${message.imageFile}`}
                                       alt="message"
-                                      className={`w-[80px] h-[80px] cursor-pointer`}
+                                      className={`w-[80px] h-[80px] cursor-pointer object-contain rounded-md`}
                                       onClick={() => {
                                         setPreviewImageUrl(
                                           `data:image/jpeg;base64,${message.imageFile}`
