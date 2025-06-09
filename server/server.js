@@ -88,7 +88,7 @@ db.serialize(() => {
   db.run("DROP TABLE IF EXISTS USER_ROLES");
 
   db.run(
-    "CREATE TABLE IF NOT EXISTS ACCESS_REQUEST_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, IP TEXT, status TEXT DEFAULT 'PENDING', createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
+    "CREATE TABLE IF NOT EXISTS ACCESS_REQUEST_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, IP TEXT, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
   );
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
@@ -182,6 +182,8 @@ db.serialize(() => {
   // db.run("INSERT INTO ROLES (id, name) VALUES (1, 'ADMIN')");
   // db.run("INSERT INTO ROLES (id, name) VALUES (2, 'USER')");
   // db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (7, 1)");
+  // Delete access requests that have been approved or rejected
+  db.run("DELETE FROM ACCESS_REQUEST_USERS");
 });
 
 app.get("/check-user", (req, res) => {
@@ -213,7 +215,7 @@ app.get("/check-user", (req, res) => {
       } else {
         // Check if user has pending access request
         db.get(
-          "SELECT id, name, status, createdAt FROM ACCESS_REQUEST_USERS WHERE IP = ?",
+          "SELECT id, name, createdAt FROM ACCESS_REQUEST_USERS WHERE IP = ?",
           [cleanedIP],
           (err, accessRequest) => {
             if (err) {
@@ -240,7 +242,7 @@ app.get("/check-user", (req, res) => {
 
 app.get("/access-requests", (req, res) => {
   db.all(
-    "SELECT id, name, status, createdAt FROM ACCESS_REQUEST_USERS WHERE status = 'PENDING'",
+    "SELECT id, name, createdAt FROM ACCESS_REQUEST_USERS",
     [],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -280,24 +282,18 @@ app.post("/access-request", (req, res) => {
 
 app.put("/access-request/:id", (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
-
-  db.run("UPDATE ACCESS_REQUEST_USERS SET status = ? WHERE id = ?", [
-    status,
-    id,
-  ]);
 
   // Get the IP from the access request
   db.get(
-    "SELECT IP FROM ACCESS_REQUEST_USERS WHERE id = ?",
+    "SELECT IP, name FROM ACCESS_REQUEST_USERS WHERE id = ?",
     [id],
     (err, row) => {
       if (err) return console.error(err);
 
       // Add the user to USERS table
       db.run(
-        "INSERT INTO USERS (name, IP, isAdmin) SELECT name, IP, 'N' FROM ACCESS_REQUEST_USERS WHERE id = ?",
-        [id],
+        "INSERT INTO USERS (name, IP, image, bgColor) VALUES (?, ?, ?, ?)",
+        [row.name, row.IP, "/images/image-default.png", "#e6f4ff"],
         function (err) {
           if (err) console.error("Failed to create user:", err);
           broadcast({ type: "USER_UPDATE" });
@@ -305,7 +301,7 @@ app.put("/access-request/:id", (req, res) => {
       );
 
       // Delete the access request
-      // db.run("DELETE FROM ACCESS_REQUEST_USERS WHERE id = ?", [id]);
+      db.run("DELETE FROM ACCESS_REQUEST_USERS WHERE id = ?", [id]);
     }
   );
 

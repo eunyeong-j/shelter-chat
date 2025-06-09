@@ -131,9 +131,7 @@ export const useAccessRequests = () => {
 export const useApproveAccessRequest = () => {
   return useMutation({
     mutationFn: async (id: number) => {
-      const res = await axios.put(`${API_URL}/access-request/${id}`, {
-        status: "APPROVED",
-      });
+      const res = await axios.put(`${API_URL}/access-request/${id}`);
       return res.data;
     },
   });

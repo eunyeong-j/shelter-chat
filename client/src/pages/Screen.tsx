@@ -61,12 +61,7 @@ export default function Screen() {
     refetch: refetchMessages,
   } = useMessages(isAllowed);
 
-  const {
-    data: accessRequests = [],
-    isLoading: isAccessRequestsLoading,
-    isError: isAccessRequestsError,
-    refetch: refetchAccessRequests,
-  } = useAccessRequests();
+  const { data: accessRequests = [] } = useAccessRequests();
 
   const { mutate: requestAccess } = useRequestAccess();
   const { mutate: sendMessage } = useSendMessage();

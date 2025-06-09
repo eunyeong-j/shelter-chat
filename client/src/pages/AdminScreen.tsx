@@ -64,13 +64,15 @@ export default function AdminScreen(props: AdminScreenProps) {
             <div className="flex flex-row gap-2 items-center justify-center">
               <button
                 onClick={handleUpdateAccessRequest}
-                className="flex flex-row gap-2 items-center justify-center bg-green-500 text-white px-4 py-2 rounded-md w-full"
+                className="flex flex-row gap-2 items-center justify-center bg-green-500 text-white px-4 py-2 rounded-md w-full disabled:bg-green-300"
+                disabled={selectedRequests.length === 0}
               >
                 Approve
               </button>
               <button
                 onClick={handleUpdateAccessRequest}
-                className="flex flex-row gap-2 items-center justify-center bg-red-500 text-white px-4 py-2 rounded-md w-full"
+                className="flex flex-row gap-2 items-center justify-center bg-red-500 text-white px-4 py-2 rounded-md w-full disabled:bg-red-300"
+                disabled={selectedRequests.length === 0}
               >
                 Reject
               </button>
