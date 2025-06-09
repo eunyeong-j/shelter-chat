@@ -5,6 +5,21 @@ const cors = require("cors");
 const WebSocket = require("ws");
 const app = express();
 const multer = require("multer");
+const session = require("express-session");
+const FileStore = require("session-file-store")(session);
+
+const sessionMiddleware = session({
+  secret: process.env.VITE_SESSION_SECRET || "your-secret-key-here",
+  resave: false,
+  saveUninitialized: true,
+  store: new FileStore({
+    path: "./sessions",
+  }),
+  cookie: {
+    secure: false,
+    maxAge: 1000 * 60 * 60 * 24 * 30,
+  },
+});
 
 const upload = multer();
 
@@ -26,6 +41,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(sessionMiddleware);
 
 const db = new sqlite3.Database("./mydb.sqlite");
 
@@ -79,6 +95,9 @@ db.serialize(() => {
   );
   db.run(
     `CREATE TABLE IF NOT EXISTS MESSAGE_FILE (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, image BLOB, FOREIGN KEY (messageId) REFERENCES MESSAGES(id))`
+  );
+  db.run(
+    `CREATE TABLE IF NOT EXISTS MESSAGE_REACTION (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, userId INTEGER NOT NULL, type TEXT, FOREIGN KEY (messageId) REFERENCES MESSAGES(id), FOREIGN KEY (userId) REFERENCES USERS(id))`
   );
 
   // Delete all data
@@ -159,6 +178,9 @@ app.get("/check-user", (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
+      req.session.userId = row.id;
+      req.session.save();
+
       res.json({ allowed: !!row, user: row });
     }
   );
@@ -176,12 +198,12 @@ app.get("/users", (req, res) => {
 });
 
 app.put("/user/:id/name", (req, res) => {
-  const { id } = req.params;
   const { oldName, newName } = req.body;
+  const userId = req.session.userId;
 
   db.run(
     "UPDATE USERS SET name = ? WHERE id = ?",
-    [newName, id],
+    [newName, userId],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -195,7 +217,7 @@ app.put("/user/:id/name", (req, res) => {
       // Log the name change
       db.run(
         "INSERT INTO LOGS (userId, action, details) VALUES (?, ?, ?)",
-        [id, "NAME_CHANGE", detailLog],
+        [userId, "NAME_CHANGE", detailLog],
         (logErr) => {
           if (logErr) {
             console.error("Failed to create log:", logErr);
@@ -213,12 +235,12 @@ app.put("/user/:id/name", (req, res) => {
 });
 
 app.put("/user/:id/image", (req, res) => {
-  const { id } = req.params;
   const { image } = req.body;
+  const userId = req.session.userId;
 
   db.run(
     "UPDATE USERS SET image = ? WHERE id = ?",
-    [image, id],
+    [image, userId],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -235,12 +257,12 @@ app.put("/user/:id/image", (req, res) => {
 });
 
 app.put("/user/:id/bgColor", (req, res) => {
-  const { id } = req.params;
   const { bgColor } = req.body;
+  const userId = req.session.userId;
 
   db.run(
     "UPDATE USERS SET bgColor = ? WHERE id = ?",
-    [bgColor, id],
+    [bgColor, userId],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -257,31 +279,51 @@ app.put("/user/:id/bgColor", (req, res) => {
 
 app.get("/messages", (req, res) => {
   db.all(
-    `SELECT * 
+    `SELECT messages.type,
+            messages.messageId,
+            messages.isMine,
+            messages.message,
+            messages.imageFile,
+            messages.createdAt,
+            messages.name,
+            messages.image,
+            messages.bgColor,
+            messages.deletedAt,
+            messages.reactions,
+      CASE
+        WHEN (messages.type = 'MSG'
+              AND messages.userId IS NOT NULL
+              AND messages.deletedAt IS NULL
+              AND messages.userId = LAG(messages.userId) OVER (ORDER BY messages.createdAt)
+        )
+        THEN 'Y'
+        ELSE 'N'
+      END AS isContinue
       FROM (
             SELECT "DATE" as type,
                     NULL as messageId,
-                    NULL as userId,
+                    "N" as isMine,
                     strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours')) as message,
                     NULL as imageFile,
-                    strftime('%Y-%m-%d %H:%M:%S', datetime(createdAt, '+9 hours')) as createdAt,
                     NULL as name,
                     NULL as image,
                     NULL as bgColor,
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(createdAt, '+9 hours')) as createdAt,
                     NULL as deletedAt,
-                    NULL as reactions
+                    NULL as reactions,
+                    MESSAGES.userId as userId
               FROM MESSAGES
               GROUP BY strftime('%Y년 %m월 %d일', datetime(createdAt, '+9 hours'))
               UNION ALL
               SELECT "MSG" as type,
                     MESSAGES.id as messageId, 
-                    MESSAGES.userId as userId, 
+                    CASE WHEN MESSAGES.userId = ? THEN "Y" ELSE "N" END as isMine,
                     MESSAGES.message, 
                     MESSAGE_FILE.image as imageFile,
-                    strftime('%Y-%m-%d %H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
                     USERS.name, 
                     USERS.image, 
                     USERS.bgColor,
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
                     MESSAGES.deletedAt,
                     (
                       SELECT GROUP_CONCAT(type || ':' || cnt, ',')
@@ -291,25 +333,28 @@ app.get("/messages", (req, res) => {
                         WHERE messageId = MESSAGES.id
                         GROUP BY type
                       )
-                    ) as reactions
+                    ) as reactions,
+                    MESSAGES.userId
               FROM MESSAGES 
               LEFT JOIN MESSAGE_FILE ON MESSAGES.id = MESSAGE_FILE.messageId
               INNER JOIN USERS ON MESSAGES.userId = USERS.id
               UNION ALL
               SELECT "LOG" as type,
                     NULL as messageId,
-                    LOGS.userId,
+                    CASE WHEN LOGS.userId = ? THEN "Y" ELSE "N" END as isMine,
                     LOGS.details as message,
                     NULL as imageFile,
-                    strftime('%Y-%m-%d %H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
                     NULL as name,
                     NULL as image,
                     NULL as bgColor,
+                    strftime('%Y-%m-%d %H:%M:%S', datetime(LOGS.createdAt, '+9 hours')) as createdAt,
                     NULL as deletedAt,
-                    NULL as reactions
-              FROM LOGS)
+                    NULL as reactions,
+                    NULL as userId
+              FROM LOGS
+          ) as messages
       ORDER BY createdAt ASC`,
-    [],
+    [req.session.userId, req.session.userId],
     (err, rows) => {
       res.json(rows);
     }
@@ -318,8 +363,8 @@ app.get("/messages", (req, res) => {
 
 app.post("/message", upload.single("file"), (req, res) => {
   const { body, file } = req;
-  const userId = body.userId;
   const message = body.message;
+  const userId = req.session.userId;
 
   const blob = file ? Buffer.from(file.buffer).toString("base64") : null;
 
@@ -371,7 +416,8 @@ app.delete("/message/:id", (req, res) => {
 
 app.post("/message/:messageId/reaction", (req, res) => {
   const { messageId } = req.params;
-  const { type, userId } = req.body;
+  const { type } = req.body;
+  const userId = req.session.userId;
 
   // Check if reaction already exists
   db.get(

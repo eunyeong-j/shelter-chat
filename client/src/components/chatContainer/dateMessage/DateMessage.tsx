@@ -1,15 +1,13 @@
 import { Message } from "global-types";
 
-export default function DateMessage(props: {
+type DateMessageProps = {
   message: Message;
-  index: number;
-}) {
-  const { message, index } = props;
+};
+
+export default function DateMessage(props: DateMessageProps) {
+  const { message } = props;
   return (
-    <div
-      key={`date-${message.id}-${index}`}
-      className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]"
-    >
+    <div className="relative w-full mx-auto flex flex-col items-center justify-center h-[50px]">
       <div className="bg-white px-3 rounded-[12.5px] border border-solid border-[#d9d9d9] z-[1]">
         <span className="font-normal text-[#8a8a8a] text-xs text-center">
           {message.message}

@@ -3,8 +3,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 const API_URL = `http://${process.env.VITE_HOST_IP}:${process.env.VITE_HOST_SERVER_PORT}`;
 
+axios.defaults.withCredentials = true;
+
 // Queries
-export const useUsers = () => {
+export const useUsers = (enabled: boolean) => {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -12,10 +14,11 @@ export const useUsers = () => {
       return res.data;
     },
     staleTime: 60000,
+    enabled,
   });
 };
 
-export const useMessages = () => {
+export const useMessages = (enabled: boolean) => {
   return useQuery({
     queryKey: ["messages"],
     queryFn: async () => {
@@ -23,6 +26,7 @@ export const useMessages = () => {
       return res.data;
     },
     staleTime: 60000,
+    enabled,
   });
 };
 
@@ -50,15 +54,13 @@ export const useSendMessage = () => {
 export const useUpdateUserName = () => {
   return useMutation({
     mutationFn: async ({
-      userId,
       oldName,
       newName,
     }: {
-      userId: number;
       oldName: string;
       newName: string;
     }) => {
-      const res = await axios.put(`${API_URL}/user/${userId}/name`, {
+      const res = await axios.put(`${API_URL}/user/name`, {
         oldName,
         newName,
       });
@@ -69,14 +71,8 @@ export const useUpdateUserName = () => {
 
 export const useUpdateUserImage = () => {
   return useMutation({
-    mutationFn: async ({
-      userId,
-      image,
-    }: {
-      userId: number;
-      image: string;
-    }) => {
-      const res = await axios.put(`${API_URL}/user/${userId}/image`, {
+    mutationFn: async ({ image }: { image: string }) => {
+      const res = await axios.put(`${API_URL}/user/image`, {
         image,
       });
       return res.data;
@@ -92,7 +88,6 @@ export const useAddReaction = () => {
       type,
     }: {
       messageId: number;
-      userId: number;
       type: string;
     }) => {
       const res = await axios.post(`${API_URL}/message/${messageId}/reaction`, {
@@ -106,14 +101,8 @@ export const useAddReaction = () => {
 
 export const useUpdateUserBgColor = () => {
   return useMutation({
-    mutationFn: async ({
-      userId,
-      bgColor,
-    }: {
-      userId: number;
-      bgColor: string;
-    }) => {
-      const res = await axios.put(`${API_URL}/user/${userId}/bgColor`, {
+    mutationFn: async ({ bgColor }: { bgColor: string }) => {
+      const res = await axios.put(`${API_URL}/user/bgColor`, {
         bgColor,
       });
       return res.data;

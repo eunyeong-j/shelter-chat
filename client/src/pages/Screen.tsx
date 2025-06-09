@@ -36,19 +36,23 @@ export default function Screen() {
     isError: isIpError,
   } = useCheckUser();
 
+  const isAllowed = useMemo(() => {
+    return userData?.allowed ? true : false;
+  }, [userData]);
+
   const {
     data: users = [],
     isLoading: isUsersLoading,
     isError: isUsersError,
     refetch: refetchUsers,
-  } = useUsers();
+  } = useUsers(isAllowed);
 
   const {
     data: messages = [],
     isLoading: isMessagesLoading,
     isError: isMessagesError,
     refetch: refetchMessages,
-  } = useMessages();
+  } = useMessages(isAllowed);
 
   const { mutate: sendMessage } = useSendMessage();
   const { mutate: updateUserName } = useUpdateUserName();
@@ -115,8 +119,6 @@ export default function Screen() {
 
   const handleEnter = (text: string) => {
     const formData = new FormData();
-
-    formData.append("userId", userData.user.id);
     formData.append("message", text);
     formData.append("createdAt", new Date().toISOString());
     if (imageFile) {
@@ -176,7 +178,6 @@ export default function Screen() {
         <ChatContainer
           messages={messages}
           isMessagesLoading={isMessagesLoading}
-          userId={userData.user.id}
           users={users}
           isUsersLoading={isUsersLoading}
           setPreviewImageUrl={setPreviewImageUrl}
@@ -188,7 +189,6 @@ export default function Screen() {
           setNewName={setNewName}
           onUpdateName={(newName) => {
             updateUserName({
-              userId: userData.user.id,
               oldName: userData.user.name,
               newName: newName,
             });
@@ -196,14 +196,12 @@ export default function Screen() {
           }}
           onUpdateImage={(newImage) => {
             updateUserImage({
-              userId: userData.user.id,
               image: newImage,
             });
           }}
           onReaction={(messageId, type) => {
             addReaction({
               messageId: messageId,
-              userId: userData.user.id,
               type: type,
             });
           }}

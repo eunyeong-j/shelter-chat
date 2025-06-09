@@ -16,8 +16,7 @@ export default function ChatReaction(props: ChatReactionProps) {
     onReactionClick,
   } = props;
   const reactionRef = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState<number>(0);
-  const [left, setLeft] = useState<number>(0);
+  const [style, setStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,9 +40,17 @@ export default function ChatReaction(props: ChatReactionProps) {
         `.message-content-text-container-inner[data-message-id="${reactionTargetId}"]`
       );
       if (targetElement) {
-        const { top, left, height } = targetElement.getBoundingClientRect();
-        setTop(top + height);
-        setLeft(left);
+        const { top, height } = targetElement.getBoundingClientRect();
+        const isMine = targetElement.getAttribute("data-is-mine") === "Y";
+        const newStyle: React.CSSProperties = { top: top + height };
+        if (isMine) {
+          newStyle.left = "auto";
+          newStyle.right = "calc(3.5rem + 15px)";
+        } else {
+          newStyle.left = "calc(3.5rem + 15px)";
+          newStyle.right = "auto";
+        }
+        setStyle(newStyle);
       }
     }
   }, [reactionTargetId]);
@@ -51,11 +58,11 @@ export default function ChatReaction(props: ChatReactionProps) {
   return (
     <div
       ref={reactionRef}
-      className={`chat-reaction absolute top-0 left-0 transition-opacity duration-300 z-20 shadow-md ${
+      className={`chat-reaction absolute top-0 left-0 transition-opacity duration-300 z-20 shadow-md w-fit ${
         isReactionOpen ? "opacity-100" : "opacity-0"
       }`}
-      style={{ top: `${top}px`, left: `${left}px` }}
       onMouseLeave={() => setIsReactionOpen(false)}
+      style={style}
     >
       <div className="chat-reaction-icon flex flex-row gap-2 bg-gray-50 rounded-md py-1 px-2">
         {DEFAULT_REACTION_LIST.map((reaction, index) => (

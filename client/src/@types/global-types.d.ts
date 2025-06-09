@@ -11,7 +11,7 @@ declare module "global-types" {
 
   export type Message = {
     id?: number;
-    userId: number;
+    isMine: "Y" | "N";
     message: string;
     imageFile?: string; // base64
     createdAt: Date;
@@ -19,6 +19,7 @@ declare module "global-types" {
     messageId?: number;
     type?: "DATE" | "MSG" | "LOG";
     reactions?: string;
+    isContinue?: "Y" | "N";
   };
 
   export interface UserMessage extends Message, User {}

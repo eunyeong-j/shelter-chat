@@ -1,4 +1,5 @@
 import { UserMessage, User } from "global-types";
+import { DEFAULT_REACTION_LIST } from "@data/default";
 import { X } from "lucide-react";
 import LogMessage from "./logMessage/LogMessage";
 import DateMessage from "./dateMessage/DateMessage";
@@ -8,7 +9,6 @@ import { useState } from "react";
 import ChatHeader from "./chatHeader/ChatHeader";
 
 import "./style.scss";
-import { DEFAULT_REACTION_LIST } from "@data/default";
 
 type ChatContainerProps = {
   chatContainerRef: React.RefObject<HTMLDivElement>;
@@ -20,7 +20,6 @@ type ChatContainerProps = {
   onReaction: (messageId: number, type: string) => void;
   messages: Array<UserMessage>;
   isMessagesLoading: boolean;
-  userId: number;
   users: Array<User>;
   isUsersLoading: boolean;
   setPreviewImageUrl: (image: string) => void;
@@ -38,7 +37,6 @@ export default function ChatContainer(props: ChatContainerProps) {
     onReaction,
     messages,
     isMessagesLoading,
-    userId,
     users,
     isUsersLoading,
     setPreviewImageUrl,
@@ -65,7 +63,7 @@ export default function ChatContainer(props: ChatContainerProps) {
     <div
       ref={chatContainerRef}
       id="chat-container"
-      className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden py-[20px] pb-[50px] scrollbar px-0"
+      className="w-full mx-auto h-full top-[0px] left-[190px] bg-white border border-solid border-[#f0f0f0] overflow-y-auto overflow-x-hidden pl-[10px] pr-0 py-[20px] pb-[50px] scrollbar"
       onScroll={handleScroll}
     >
       {/* Header */}
@@ -92,37 +90,33 @@ export default function ChatContainer(props: ChatContainerProps) {
         messages.length > 0 &&
         messages.map((message: UserMessage, index: number) => {
           if (message?.type === "DATE") {
-            return <DateMessage message={message} index={index} />;
+            return <DateMessage key={`date-${index}`} message={message} />;
           }
           if (message?.type === "LOG") {
-            return <LogMessage message={message} index={index} />;
+            return <LogMessage key={`log-${index}`} message={message} />;
           }
 
           const createdTime = message.createdAt.toLocaleString().split(" ")[1];
-          const isMine = message.userId === userId;
           const isDeleted = message.deletedAt !== null;
-          const isContinue =
-            index !== 0 &&
-            messages[index - 1].type !== "LOG" &&
-            message.userId === messages[index - 1].userId;
           const reactions = message.reactions?.split(",");
           const isReaction = reactions && reactions.length > 0;
+          const isContinue = message.isContinue;
 
           return (
             <div
               key={`${message.id}-${index}`}
               className="message-container relative"
               data-message-id={message.messageId}
-              data-is-mine={isMine ? "Y" : "N"}
+              data-is-mine={message.isMine}
               data-is-deleted={isDeleted ? "Y" : "N"}
-              data-is-continue={isContinue ? "Y" : "N"}
               data-is-reaction={isReaction ? "Y" : "N"}
+              data-is-continue={isContinue}
             >
               <div
                 className={`message-content-container flex items-start gap-2 mt-4 px-14`}
               >
                 {/* 사용자 이미지 */}
-                {!isContinue && (
+                {isContinue === "N" && (
                   <div
                     className={`message-user-image absolute top-[16px] left-[4px] flex`}
                   >
@@ -140,7 +134,7 @@ export default function ChatContainer(props: ChatContainerProps) {
 
                 {/* 메시지 내용 */}
                 <div className={`message-content flex flex-col gap-1`}>
-                  {!isContinue && (
+                  {isContinue === "N" && (
                     <span
                       className={`message-user-name text-xs font-bold text-[#595959] text-left`}
                     >
@@ -149,12 +143,13 @@ export default function ChatContainer(props: ChatContainerProps) {
                   )}
 
                   <div
-                    className={`message-content-text-container flex flex-row gap-1 items-end`}
+                    className={`message-content-text-container flex flex-row gap-1 items-end relative`}
                   >
                     <div
                       className={`message-content-text-container-inner relative rounded-[7px] px-3 py-2 max-w-[80%]`}
                       style={{ backgroundColor: message.bgColor }}
                       data-message-id={message.messageId}
+                      data-is-mine={message.isMine}
                       onMouseEnter={() => {
                         setIsReactionOpen(true);
                         setReactionTargetId(message?.messageId ?? null);
@@ -173,6 +168,7 @@ export default function ChatContainer(props: ChatContainerProps) {
                             }
                             return (
                               <div
+                                key={`${message.id}-${index}-${reaction}`}
                                 className="relative message-reaction-icon-container cursor-pointer hover:scale-110 transition-all duration-300"
                                 onClick={() => handleReactionClick(type)}
                               >
@@ -231,7 +227,7 @@ export default function ChatContainer(props: ChatContainerProps) {
                       >
                         {createdTime}
                       </span>
-                      {isMine && !isDeleted && (
+                      {message.isMine === "Y" && !isDeleted && (
                         <X
                           className="font-normal text-xs self-center text-red-500 hover:text-red-700 cursor-pointer opacity-30 hover:opacity-100 transition-all duration-300"
                           size={14}
