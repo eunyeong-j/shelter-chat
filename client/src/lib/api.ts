@@ -84,14 +84,12 @@ export const useAddReaction = () => {
   return useMutation({
     mutationFn: async ({
       messageId,
-      userId,
       type,
     }: {
       messageId: number;
       type: string;
     }) => {
       const res = await axios.post(`${API_URL}/message/${messageId}/reaction`, {
-        userId,
         type,
       });
       return res.data;
@@ -114,6 +112,37 @@ export const useDeleteMessage = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await axios.delete(`${API_URL}/message/${id}`);
+      return res.data;
+    },
+  });
+};
+
+export const useAccessRequests = () => {
+  return useQuery({
+    queryKey: ["access-requests"],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/access-requests`);
+      return res.data;
+    },
+    staleTime: 60000,
+  });
+};
+
+export const useApproveAccessRequest = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await axios.put(`${API_URL}/access-request/${id}`, {
+        status: "APPROVED",
+      });
+      return res.data;
+    },
+  });
+};
+
+export const useRequestAccess = () => {
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const res = await axios.post(`${API_URL}/access-request`, { name });
       return res.data;
     },
   });

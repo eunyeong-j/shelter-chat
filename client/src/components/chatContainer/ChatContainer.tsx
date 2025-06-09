@@ -8,7 +8,7 @@ import ChatReaction from "./chatReaction/ChatReaction";
 import { useState } from "react";
 import ChatHeader from "./chatHeader/ChatHeader";
 
-import "./style.scss";
+import "./ChatContainer.scss";
 
 type ChatContainerProps = {
   chatContainerRef: React.RefObject<HTMLDivElement>;
@@ -150,16 +150,14 @@ export default function ChatContainer(props: ChatContainerProps) {
                       style={{ backgroundColor: message.bgColor }}
                       data-message-id={message.messageId}
                       data-is-mine={message.isMine}
-                      onMouseEnter={() => {
-                        setIsReactionOpen(true);
-                        setReactionTargetId(message?.messageId ?? null);
-                      }}
                     >
                       {/* 사용자 반응 */}
                       {message.reactions && (
-                        <div className="message-content-reactions absolute w-full bottom-[-22px] left-[5px] flex gap-2">
+                        <div className="message-content-reactions absolute w-max bottom-[-22px] left-[5px] flex gap-2">
                           {reactions?.map((reaction) => {
-                            const [type, count] = reaction.split(":");
+                            const [type, count, isMine] = reaction.split(":");
+                            const isMineReaction =
+                              isMine === "isMine" ? "Y" : "N";
                             const reactionIcon = DEFAULT_REACTION_LIST.find(
                               (reaction) => reaction.type === type
                             );
@@ -169,8 +167,9 @@ export default function ChatContainer(props: ChatContainerProps) {
                             return (
                               <div
                                 key={`${message.id}-${index}-${reaction}`}
-                                className="relative message-reaction-icon-container cursor-pointer hover:scale-110 transition-all duration-300"
+                                className="message-reaction-icon-container relative cursor-pointer hover:scale-110 transition-all duration-300"
                                 onClick={() => handleReactionClick(type)}
+                                data-reaction-is-mine={isMineReaction}
                               >
                                 <div className="message-reaction-icon">
                                   <img
@@ -190,6 +189,10 @@ export default function ChatContainer(props: ChatContainerProps) {
 
                       <div
                         className={`message-content-text font-normal text-black text-sm break-words whitespace-pre-wrap`}
+                        onMouseEnter={() => {
+                          setIsReactionOpen(true);
+                          setReactionTargetId(message?.messageId ?? null);
+                        }}
                       >
                         {!isDeleted ? (
                           <>

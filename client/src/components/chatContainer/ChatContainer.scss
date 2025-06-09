@@ -42,5 +42,14 @@
     .message-content-text-container {
       margin-bottom: 25px;
     }
+
+    .message-reaction-icon-container {
+      &[data-reaction-is-mine="Y"] {
+        .message-reaction-icon {
+          border: 1px solid #f87171;
+          border-radius: 4px;
+        }
+      }
+    }
   }
 }

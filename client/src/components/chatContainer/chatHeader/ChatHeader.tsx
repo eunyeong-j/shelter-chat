@@ -1,10 +1,10 @@
-import { User } from "global-types";
+import { UserType } from "global-types";
 import Setting from "@components/setting/Setting";
 import ChatTitle from "../chatTitle/ChatTitle";
 import Users from "@components/users/Users";
 
 type ChatHeaderProps = {
-  users: User[];
+  users: Array<UserType>;
   isUsersLoading: boolean;
   newName: string;
   setNewName: (name: string) => void;

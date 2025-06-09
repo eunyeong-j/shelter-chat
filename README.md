@@ -5,18 +5,19 @@ This chat app is a closed system that stores data in the host's local environmen
 ## Installation
 
 ```
+// root
+$ npm install
+
 // cd client
-$ npm i
-$ npm run dev
+$ npm install
 
 // cd server
-$ npm i
-$ npm run dev
+$ npm install
 ```
 
 ## Server Start
 
 ```
-// root path
-$ npm run start
+// root
+$ npm run dev
 ```

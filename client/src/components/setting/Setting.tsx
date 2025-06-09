@@ -2,13 +2,13 @@ import { Settings, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import SeparatorLine from "@components/separatorLine/SeparatorLine";
 import { DEFAULT_USER_IMAGES } from "@data/default";
-import { User } from "global-types";
+import { UserType } from "global-types";
 
 interface SettingProps {
   newName: string;
   setNewName: (name: string) => void;
   onUpdateName: (name: string) => void;
-  users: Array<User>;
+  users: Array<UserType>;
   onUpdateImage: (image: string) => void;
 }
 

@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { Loader2, UsersRound } from "lucide-react";
-import { User } from "global-types";
+import { UserType } from "global-types";
 
 type UsersProps = {
-  users: User[];
+  users: Array<UserType>;
   isUsersLoading: boolean;
 };
 
@@ -54,7 +54,7 @@ export default function Users(props: UsersProps) {
           )}
           {!isUsersLoading &&
             users.length > 0 &&
-            users.map((user: User, index: number) => (
+            users.map((user: UserType, index: number) => (
               <div
                 key={`${user.id}-${index}`}
                 className="flex items-center mb-1 gap-3"

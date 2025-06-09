@@ -78,12 +78,18 @@ function broadcast(message) {
 /*
 db.serialize(() => {
   // DELETE ALL DATA
+  db.run("DROP TABLE IF EXISTS ACCESS_REQUEST_USERS");
   db.run("DROP TABLE IF EXISTS USERS");
   db.run("DROP TABLE IF EXISTS MESSAGES");
   db.run("DROP TABLE IF EXISTS LOGS");
   db.run("DROP TABLE IF EXISTS MESSAGE_FILE");
   db.run("DROP TABLE IF EXISTS MESSAGE_REACTION");
+  db.run("DROP TABLE IF EXISTS ROLES");
+  db.run("DROP TABLE IF EXISTS USER_ROLES");
 
+  db.run(
+    "CREATE TABLE IF NOT EXISTS ACCESS_REQUEST_USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, IP TEXT, status TEXT DEFAULT 'PENDING', createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
+  );
   db.run(
     "CREATE TABLE IF NOT EXISTS USERS (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, image TEXT, IP TEXT, bgColor TEXT, isOnline BOOLEAN DEFAULT FALSE, createdAt DATETIME DEFAULT CURRENT_TIMESTAMP)"
   );
@@ -98,6 +104,12 @@ db.serialize(() => {
   );
   db.run(
     `CREATE TABLE IF NOT EXISTS MESSAGE_REACTION (id INTEGER PRIMARY KEY AUTOINCREMENT, messageId INTEGER NOT NULL, userId INTEGER NOT NULL, type TEXT, FOREIGN KEY (messageId) REFERENCES MESSAGES(id), FOREIGN KEY (userId) REFERENCES USERS(id))`
+  );
+  db.run(
+    "CREATE TABLE IF NOT EXISTS ROLES (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)"
+  );
+  db.run(
+    "CREATE TABLE IF NOT EXISTS USER_ROLES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, roleId INTEGER NOT NULL, FOREIGN KEY (userId) REFERENCES USERS(id), FOREIGN KEY (roleId) REFERENCES ROLES(id))"
   );
 
   // Delete all data
@@ -153,13 +165,23 @@ db.serialize(() => {
 
 db.serialize(() => {
   // 서버 재실행 시 삭제된 메세지만 완전 삭제
-  db.run(
-    `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
-  );
-  db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
-
+  // db.run(
+  //   `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
+  // );
+  // db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
   // Update DS user's IP
   // db.run("UPDATE USERS SET IP = ? WHERE name = ?", ["192.168.0.5", "DS"]);
+  // db.run("DROP TABLE IF EXISTS ROLES");
+  // db.run("DROP TABLE IF EXISTS USER_ROLES");
+  // db.run(
+  //   "CREATE TABLE IF NOT EXISTS ROLES (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
+  // );
+  // db.run(
+  //   "CREATE TABLE IF NOT EXISTS USER_ROLES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, roleId INTEGER NOT NULL, FOREIGN KEY (userId) REFERENCES USERS(id), FOREIGN KEY (roleId) REFERENCES ROLES(id))"
+  // );
+  // db.run("INSERT INTO ROLES (id, name) VALUES (1, 'ADMIN')");
+  // db.run("INSERT INTO ROLES (id, name) VALUES (2, 'USER')");
+  // db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (7, 1)");
 });
 
 app.get("/check-user", (req, res) => {
@@ -172,18 +194,123 @@ app.get("/check-user", (req, res) => {
 
   // Check IP against USERS table instead of allowedIPs array
   db.get(
-    "SELECT id, name, image FROM USERS WHERE IP = ?",
+    `SELECT u.id, 
+        u.name, 
+        u.image, 
+        (SELECT CASE WHEN EXISTS (SELECT 1 FROM USER_ROLES ur WHERE ur.userId = u.id AND ur.roleId = 1) THEN 'Y' ELSE 'N' END) as isAdmin
+      FROM USERS u 
+      WHERE u.IP = ?`,
     [cleanedIP],
     (err, row) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      req.session.userId = row.id;
-      req.session.save();
+      if (row) {
+        req.session.userId = row.id;
+        req.session.save();
 
-      res.json({ allowed: !!row, user: row });
+        res.json({ allowed: !!row, user: row });
+      } else {
+        // Check if user has pending access request
+        db.get(
+          "SELECT id, name, status, createdAt FROM ACCESS_REQUEST_USERS WHERE IP = ?",
+          [cleanedIP],
+          (err, accessRequest) => {
+            if (err) {
+              return res.status(400).json({ error: "접근 권한이 없습니다." });
+            }
+            if (!accessRequest) {
+              return res.status(200).json({ allowed: false, user: null });
+            }
+
+            req.session.userId = accessRequest.id;
+            req.session.save();
+
+            res.json({
+              allowed: false,
+              accessRequest: accessRequest || null,
+              user: accessRequest,
+            });
+          }
+        );
+      }
     }
   );
+});
+
+app.get("/access-requests", (req, res) => {
+  db.all(
+    "SELECT id, name, status, createdAt FROM ACCESS_REQUEST_USERS WHERE status = 'PENDING'",
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+app.post("/access-request", (req, res) => {
+  const { name } = req.body;
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
+
+  const cleanedIP = ip.replace(/^::ffff:/, "");
+
+  db.get(
+    "SELECT id FROM ACCESS_REQUEST_USERS WHERE IP = ?",
+    [cleanedIP],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (row) {
+        return res
+          .status(400)
+          .json({ error: "이미 접근 요청이 완료되었습니다." });
+      }
+
+      db.run("INSERT INTO ACCESS_REQUEST_USERS (name, IP) VALUES (?, ?)", [
+        name,
+        cleanedIP,
+      ]);
+
+      broadcast({ type: "ACCESS_REQUEST_UPDATE" });
+      res.json({ success: true });
+    }
+  );
+});
+
+app.put("/access-request/:id", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  db.run("UPDATE ACCESS_REQUEST_USERS SET status = ? WHERE id = ?", [
+    status,
+    id,
+  ]);
+
+  // Get the IP from the access request
+  db.get(
+    "SELECT IP FROM ACCESS_REQUEST_USERS WHERE id = ?",
+    [id],
+    (err, row) => {
+      if (err) return console.error(err);
+
+      // Add the user to USERS table
+      db.run(
+        "INSERT INTO USERS (name, IP, isAdmin) SELECT name, IP, 'N' FROM ACCESS_REQUEST_USERS WHERE id = ?",
+        [id],
+        function (err) {
+          if (err) console.error("Failed to create user:", err);
+          broadcast({ type: "USER_UPDATE" });
+        }
+      );
+
+      // Delete the access request
+      // db.run("DELETE FROM ACCESS_REQUEST_USERS WHERE id = ?", [id]);
+    }
+  );
+
+  broadcast({ type: "ACCESS_REQUEST_UPDATE" });
+  res.json({ success: true });
 });
 
 app.get("/users", (req, res) => {
@@ -326,9 +453,9 @@ app.get("/messages", (req, res) => {
                     strftime('%Y-%m-%d %H:%M:%S', datetime(MESSAGES.createdAt, '+9 hours')) as createdAt, 
                     MESSAGES.deletedAt,
                     (
-                      SELECT GROUP_CONCAT(type || ':' || cnt, ',')
+                      SELECT GROUP_CONCAT(type || ':' || cnt || ':' || CASE WHEN userId = ? THEN 'isMine' ELSE 'isNotMine' END, ',')
                       FROM (
-                        SELECT type, COUNT(*) as cnt
+                        SELECT type, COUNT(*) as cnt, userId
                         FROM MESSAGE_REACTION
                         WHERE messageId = MESSAGES.id
                         GROUP BY type

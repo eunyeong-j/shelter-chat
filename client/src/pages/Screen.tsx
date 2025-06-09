@@ -11,12 +11,16 @@ import {
   useUpdateUserName,
   useUpdateUserImage,
   useAddReaction,
+  useRequestAccess,
+  useAccessRequests,
 } from "@lib/api";
 import ChatTextarea from "@components/chatTextarea/ChatTextarea";
 import ImagePreview from "@components/imagePreview/ImagePreview";
 import GoToLatestButton from "@components/goToLatestButton/GoToLatestButton";
 import LastUpdatedVersion from "@components/lastUpdatedVersion/LastUpdatedVersion";
 import ChatContainer from "@components/chatContainer/ChatContainer";
+import RequestAccess from "./RequestAccess";
+import AdminScreen from "./AdminScreen";
 
 export default function Screen() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -30,10 +34,13 @@ export default function Screen() {
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<Blob | null>(null);
 
+  const [openAdminScreen, setOpenAdminScreen] = useState<boolean>(true);
+
   const {
     data: userData,
     isLoading: isIpLoading,
     isError: isIpError,
+    refetch: refetchUser,
   } = useCheckUser();
 
   const isAllowed = useMemo(() => {
@@ -54,6 +61,14 @@ export default function Screen() {
     refetch: refetchMessages,
   } = useMessages(isAllowed);
 
+  const {
+    data: accessRequests = [],
+    isLoading: isAccessRequestsLoading,
+    isError: isAccessRequestsError,
+    refetch: refetchAccessRequests,
+  } = useAccessRequests();
+
+  const { mutate: requestAccess } = useRequestAccess();
   const { mutate: sendMessage } = useSendMessage();
   const { mutate: updateUserName } = useUpdateUserName();
   const { mutate: deleteMessage } = useDeleteMessage();
@@ -87,6 +102,10 @@ export default function Screen() {
 
   useEffect(() => {
     // Subscribe to WebSocket events
+    websocketService.subscribe("ACCESS_REQUEST_UPDATE", () => {
+      refetchUser();
+    });
+
     websocketService.subscribe("USER_UPDATE", () => {
       refetchUsers();
     });
@@ -156,74 +175,92 @@ export default function Screen() {
   }
 
   if (!isIpLoading && !userData?.allowed) {
-    return (
-      <div className="flex items-center justify-center h-screen text-white">
-        접근이 허용된 사용자가 아닙니다!
-      </div>
-    );
+    return <RequestAccess userData={userData} requestAccess={requestAccess} />;
   }
 
   return (
-    <div className="relative max-w-[600px] w-full mx-auto h-full bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
-      <BackgroundVideo />
+    <>
+      {userData?.user?.isAdmin === "Y" && (
+        <>
+          {openAdminScreen ? (
+            <AdminScreen
+              accessRequests={accessRequests}
+              closeAdminScreen={() => setOpenAdminScreen(false)}
+            />
+          ) : (
+            <div className="absolute right-5 bottom-5 z-10">
+              <button
+                type="button"
+                onClick={() => setOpenAdminScreen(true)}
+                className="py-2 px-4 bg-blue-500 text-white rounded-md"
+              >
+                Open Admin Page
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      <div className="relative max-w-[600px] w-full mx-auto h-full bg-[#f8f8f8] flex flex-row justify-center w-full overflow-hidden">
+        <BackgroundVideo />
 
-      <ImagePreview
-        showPreview={showPreview}
-        setShowPreview={setShowPreview}
-        previewImageUrl={previewImageUrl}
-      />
-
-      <div className="w-full h-[100vh] pt-[46px] pb-[150px] relative">
-        {/* Main Chat Container */}
-        <ChatContainer
-          messages={messages}
-          isMessagesLoading={isMessagesLoading}
-          users={users}
-          isUsersLoading={isUsersLoading}
-          setPreviewImageUrl={setPreviewImageUrl}
+        <ImagePreview
+          showPreview={showPreview}
           setShowPreview={setShowPreview}
-          deleteMessage={deleteMessage}
-          chatContainerRef={chatContainerRef}
-          onScroll={handleScroll}
-          newName={newName}
-          setNewName={setNewName}
-          onUpdateName={(newName) => {
-            updateUserName({
-              oldName: userData.user.name,
-              newName: newName,
-            });
-            setNewName("");
-          }}
-          onUpdateImage={(newImage) => {
-            updateUserImage({
-              image: newImage,
-            });
-          }}
-          onReaction={(messageId, type) => {
-            addReaction({
-              messageId: messageId,
-              type: type,
-            });
-          }}
+          previewImageUrl={previewImageUrl}
         />
 
-        {/* Message Input Area */}
-        <GoToLatestButton
-          showLatestButton={showLatestButton}
-          goToLatestMessage={() => goToLatestMessage("smooth")}
-        />
-        <div className="w-full h-[120px] left-0 flex px-[4px] pt-[30px] border-t border-solid border-[#e2e2e2] ">
-          <ChatTextarea
-            onEnter={handleEnter}
-            image={image}
-            setImage={setImage}
-            imageFile={imageFile}
-            setImageFile={setImageFile}
-            onEmojiClick={handleEmojiClick}
+        <div className="w-full h-[100vh] pt-[46px] pb-[150px] relative">
+          {/* Main Chat Container */}
+          <ChatContainer
+            messages={messages}
+            isMessagesLoading={isMessagesLoading}
+            users={users}
+            isUsersLoading={isUsersLoading}
+            setPreviewImageUrl={setPreviewImageUrl}
+            setShowPreview={setShowPreview}
+            deleteMessage={deleteMessage}
+            chatContainerRef={chatContainerRef}
+            onScroll={handleScroll}
+            newName={newName}
+            setNewName={setNewName}
+            onUpdateName={(newName) => {
+              updateUserName({
+                oldName: userData.user.name,
+                newName: newName,
+              });
+              setNewName("");
+            }}
+            onUpdateImage={(newImage) => {
+              updateUserImage({
+                image: newImage,
+              });
+            }}
+            onReaction={(messageId, type) => {
+              addReaction({
+                messageId: messageId,
+                type: type,
+              });
+            }}
           />
-          <LastUpdatedVersion />
+
+          {/* Message Input Area */}
+          <GoToLatestButton
+            showLatestButton={showLatestButton}
+            goToLatestMessage={() => goToLatestMessage("smooth")}
+          />
+          <div className="w-full h-[120px] left-0 flex px-[4px] pt-[30px] border-t border-solid border-[#e2e2e2] ">
+            <ChatTextarea
+              onEnter={handleEnter}
+              image={image}
+              setImage={setImage}
+              imageFile={imageFile}
+              setImageFile={setImageFile}
+              onEmojiClick={handleEmojiClick}
+            />
+            <LastUpdatedVersion />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

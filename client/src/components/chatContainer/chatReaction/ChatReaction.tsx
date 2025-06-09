@@ -59,7 +59,7 @@ export default function ChatReaction(props: ChatReactionProps) {
     <div
       ref={reactionRef}
       className={`chat-reaction absolute top-0 left-0 transition-opacity duration-300 z-20 shadow-md w-fit ${
-        isReactionOpen ? "opacity-100" : "opacity-0"
+        isReactionOpen ? "opacity-100 visible" : "opacity-0 invisible"
       }`}
       onMouseLeave={() => setIsReactionOpen(false)}
       style={style}
