@@ -112,46 +112,52 @@ db.serialize(() => {
     "CREATE TABLE IF NOT EXISTS USER_ROLES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, roleId INTEGER NOT NULL, FOREIGN KEY (userId) REFERENCES USERS(id), FOREIGN KEY (roleId) REFERENCES ROLES(id))"
   );
 
-  // Delete all data
-  // db.run("DELETE FROM USERS");
-  // db.run("DELETE FROM MESSAGES");
-  // db.run("DELETE FROM LOGS");
-
-  // Delete messages where deletedAt is not null
-  db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
+  db.run("INSERT INTO ROLES (name) VALUES ('ADMIN')");
+  db.run("INSERT INTO ROLES (name) VALUES ('USER')");
 
   const DEFAULT_USERS = [
     {
-      name: "Admin",
+      id: 1,
+      name: "장은영",
       image: "/images/image-admin.png",
-      IP: "192.168.0.126",
+      IP: "192.168.0.23",
       bgColor: "#fff4ff",
+      isAdmin: "Y",
     },
     {
-      name: "HT",
-      image: "/images/image-4.png",
-      IP: "192.168.0.35",
-      bgColor: "#e6f4ff",
-    },
-    {
-      name: "MK",
+      id: 2,
+      name: "권혁태",
       image: "/images/image-1.png",
-      IP: "192.168.0.73",
-      bgColor: "#e6edff",
+      IP: "192.168.0.83",
+      bgColor: "#e6f4ff",
+      isAdmin: "N",
     },
     {
-      name: "DS",
+      id: 3,
+      name: "박민규",
       image: "/images/image-2.png",
-      IP: "192.168.0.34",
-      bgColor: "#ffe6e6",
+      IP: "192.168.0.92",
+      bgColor: "#e6edff",
+      isAdmin: "N",
     },
     {
-      name: "JH",
+      id: 4,
+      name: "박영웅",
       image: "/images/image-3.png",
-      IP: "192.168.0.48",
+      IP: "192.168.0.93",
       bgColor: "#ffede6",
+      isAdmin: "N",
+    },
+    {
+      id: 5,
+      name: "김대섭",
+      image: "/images/image-4.png",
+      IP: "192.168.0.7",
+      bgColor: "#e6ffff",
+      isAdmin: "N",
     },
   ];
+
   DEFAULT_USERS.forEach((user) => {
     db.run("INSERT INTO USERS (name, image, IP, bgColor) VALUES (?, ?, ?, ?)", [
       user.name,
@@ -160,30 +166,24 @@ db.serialize(() => {
       user.bgColor,
     ]);
   });
+
+  // 관리자 권한 부여
+  db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (1, 1)");
+
+  // 유저 권한 부여
+  db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (2, 2)");
+  db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (3, 2)");
+  db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (4, 2)");
+  db.run(`INSERT INTO USER_ROLES (userId, roleId) VALUES (5, 2)`);
 });
 */
 
+// 서버 재실행 시 삭제된 메세지만 완전 삭제
 db.serialize(() => {
-  // 서버 재실행 시 삭제된 메세지만 완전 삭제
-  // db.run(
-  //   `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
-  // );
-  // db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
-  // Update DS user's IP
-  // db.run("UPDATE USERS SET IP = ? WHERE name = ?", ["192.168.0.5", "DS"]);
-  // db.run("DROP TABLE IF EXISTS ROLES");
-  // db.run("DROP TABLE IF EXISTS USER_ROLES");
-  // db.run(
-  //   "CREATE TABLE IF NOT EXISTS ROLES (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
-  // );
-  // db.run(
-  //   "CREATE TABLE IF NOT EXISTS USER_ROLES (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, roleId INTEGER NOT NULL, FOREIGN KEY (userId) REFERENCES USERS(id), FOREIGN KEY (roleId) REFERENCES ROLES(id))"
-  // );
-  // db.run("INSERT INTO ROLES (id, name) VALUES (1, 'ADMIN')");
-  // db.run("INSERT INTO ROLES (id, name) VALUES (2, 'USER')");
-  // db.run("INSERT INTO USER_ROLES (userId, roleId) VALUES (7, 1)");
-  // Delete access requests that have been approved or rejected
-  db.run("DELETE FROM ACCESS_REQUEST_USERS");
+  db.run(
+    `DELETE FROM MESSAGE_FILE WHERE messageId IS NULL OR messageId IN (SELECT id FROM MESSAGES WHERE deletedAt IS NOT NULL)`
+  );
+  db.run(`DELETE FROM MESSAGES WHERE deletedAt IS NOT NULL`);
 });
 
 app.get("/check-user", (req, res) => {
@@ -320,7 +320,7 @@ app.get("/users", (req, res) => {
   );
 });
 
-app.put("/user/:id/name", (req, res) => {
+app.put("/user/name", (req, res) => {
   const { oldName, newName } = req.body;
   const userId = req.session.userId;
 
@@ -357,7 +357,7 @@ app.put("/user/:id/name", (req, res) => {
   );
 });
 
-app.put("/user/:id/image", (req, res) => {
+app.put("/user/image", (req, res) => {
   const { image } = req.body;
   const userId = req.session.userId;
 
@@ -379,7 +379,7 @@ app.put("/user/:id/image", (req, res) => {
   );
 });
 
-app.put("/user/:id/bgColor", (req, res) => {
+app.put("/user/bgColor", (req, res) => {
   const { bgColor } = req.body;
   const userId = req.session.userId;
 
@@ -521,11 +521,11 @@ app.post("/message", upload.single("file"), (req, res) => {
   );
 });
 
-app.delete("/message/:id", (req, res) => {
-  const { id } = req.params;
+app.delete("/message/:messageId", (req, res) => {
+  const { messageId } = req.params;
   db.run(
     "UPDATE MESSAGES SET deletedAt = CURRENT_TIMESTAMP, message = '' WHERE id = ?",
-    [id],
+    [messageId],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });

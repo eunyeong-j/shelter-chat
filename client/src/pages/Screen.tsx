@@ -33,8 +33,7 @@ export default function Screen() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string>("");
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<Blob | null>(null);
-
-  const [openAdminScreen, setOpenAdminScreen] = useState<boolean>(true);
+  const [openAdminScreen, setOpenAdminScreen] = useState<boolean>(false);
 
   const {
     data: userData,

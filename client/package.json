@@ -5,7 +5,7 @@
   "name": "shelter-project",
   "description": "A React project for shelter chat app",
   "scripts": {
-    "dev": "vite --host 192.168.0.126 --port 5000",
+    "dev": "vite --host 192.168.0.23 --port 5000",
     "build": "vite build"
   },
   "dependencies": {
