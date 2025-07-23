@@ -20,7 +20,7 @@ export default function ImagePreview(props: {
       <img
         src={previewImageUrl}
         alt="message"
-        className={`h-auto max-w-[60vw] max-h-[70vh] object-contain cursor-default border border-solid border-[#d9d9d9] p-0 select-none`}
+        className={`h-auto max-w-[60vw] max-h-[70vh] object-contain cursor-default border border-solid border-[#d9d9d9] p-0 select-none bg-white`}
         draggable={false}
       />
     </div>
